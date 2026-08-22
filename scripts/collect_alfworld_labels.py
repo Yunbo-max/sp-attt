@@ -39,6 +39,19 @@ def commands(info):
     return list(info["admissible_commands"][0])
 
 
+def record_error(error_stream, failed, label_id, game_index, step, gamefile, exc):
+    error_row = {
+        "label_id": label_id, "episode_id": str(game_index), "checkpoint": step,
+        "gamefile": gamefile, "error_type": type(exc).__name__, "error": str(exc),
+        "traceback": traceback.format_exc(),
+    }
+    error_stream.write(json.dumps(error_row) + "\n")
+    error_stream.flush()
+    failed.add(label_id)
+    print(json.dumps({"skipped_label": label_id,
+                      "error_type": type(exc).__name__}), flush=True)
+
+
 def rollout(policy, env, observation, info, history, horizon, max_new_tokens,
             start_step, max_steps):
     done = False
@@ -189,7 +202,19 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
         for step in range(1, args.max_steps + 1):
             current = observation
             action, generation = policy.act(observation, history, commands(info), args.max_new_tokens)
-            next_obs, scores, dones, infos = env.step([action])
+            try:
+                next_obs, scores, dones, infos = env.step([action])
+            except Exception as exc:
+                # Some ALFWorld TextWorld games can reach an expert-wrapper
+                # edge state (not a valid KEEP/LEARN outcome).  Mark every
+                # unmaterialized opportunity in this episode and continue.
+                for failed_step in candidate_steps:
+                    failed_id = f"{game_index}:{failed_step}"
+                    if failed_id not in existing and failed_id not in failed:
+                        record_error(error_stream, failed, failed_id, game_index,
+                                     failed_step, gamefile, exc)
+                env.close()
+                break
             if dones[0]:
                 break
             history.append((current, action)); actions.append(action); generations.append(generation)
@@ -224,17 +249,7 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
                     returns = paired_label(policy, config, gamefile, actions, history, candidate,
                                            snapshot, horizon, args.max_new_tokens)
                 except Exception as exc:
-                    error_row = {
-                        "label_id": label_id, "episode_id": str(game_index),
-                        "checkpoint": step, "gamefile": gamefile,
-                        "error_type": type(exc).__name__, "error": str(exc),
-                        "traceback": traceback.format_exc(),
-                    }
-                    error_stream.write(json.dumps(error_row) + "\n")
-                    error_stream.flush()
-                    failed.add(label_id)
-                    print(json.dumps({"skipped_label": label_id,
-                                      "error_type": type(exc).__name__}), flush=True)
+                    record_error(error_stream, failed, label_id, game_index, step, gamefile, exc)
                     policy.restore_adapter(snapshot)
                     continue
                 row = {
