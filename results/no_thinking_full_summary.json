@@ -1,0 +1,15 @@
+{
+  "status": "single_episode_instrumentation_run_not_statistical_benchmark",
+  "date": "2026-08-22",
+  "model": "Qwen/Qwen3.5-4B",
+  "benchmark": "ALFWorld valid_seen TextWorld",
+  "decoding": {"do_sample": false, "enable_thinking": false, "max_new_tokens": 16},
+  "episodes": 1,
+  "max_steps": 50,
+  "results": {
+    "react": {"successes": 0, "success_rate": 0.0, "mean_steps": 50.0, "mean_updates": 0.0},
+    "ttt": {"successes": 0, "success_rate": 0.0, "mean_steps": 50.0, "mean_updates": 9.0},
+    "attt": {"successes": 0, "success_rate": 0.0, "mean_steps": 50.0, "mean_updates": 9.0}
+  },
+  "interpretation": "A single 4B episode reached the step cap without success for all methods. This is not a statistical benchmark result. The first five ReAct actions were complete and legal after disabling the thinking block; older full-run logs used truncated thinking and are not comparable."
+}

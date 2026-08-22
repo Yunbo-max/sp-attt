@@ -4,7 +4,8 @@ max_agent_steps: 50
 candidate_every: 5
 update_source: self
 decoding:
-  label_generation: {do_sample: false}
+  label_generation: {do_sample: false, enable_thinking: false}
+  max_new_tokens: 16
 lora:
   rank: 8
   alpha: 16

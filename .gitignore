@@ -8,4 +8,5 @@ dist/
 checkpoints/
 data/
 results/*.csv
+results/*.jsonl
 results/*.png
