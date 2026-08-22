@@ -13,7 +13,7 @@ parser.add_argument("--config", default="configs/alfworld.yaml")
 parser.add_argument("--split", default="valid_seen")
 parser.add_argument("--output", required=True)
 parser.add_argument("--max-steps", type=int, default=50)
-parser.add_argument("--max-new-tokens", type=int, default=24)
+parser.add_argument("--max-new-tokens", type=int, default=16)
 args = parser.parse_args()
 rows = run_alfworld(args.method, model_name=args.model, config_path=args.config,
                     episodes=args.episodes, seed=args.seed, split=args.split,
