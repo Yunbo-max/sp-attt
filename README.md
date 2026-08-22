@@ -93,7 +93,7 @@ label generation (evaluation remains at 16).
 ```bash
 python scripts/collect_alfworld_labels.py --split train --games 1800 \
   --target-labels 500 --horizon remaining --max-new-tokens 8 \
-  --output results/labels_train_random_parserfix_remaining_500.jsonl
+  --output results/labels_train_random_rewardfix_remaining_500.jsonl
 ```
 
 The official 140-task ReAct/TTT/aTTT matrix is launched with:
