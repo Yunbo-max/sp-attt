@@ -1,14 +1,14 @@
 {
-  "n": 36,
-  "p_harmful": 0.1111111111111111,
-  "mean": -0.058550000000000005,
+  "n": 40,
+  "p_harmful": 0.125,
+  "mean": -0.05280499999999999,
   "median": 0.0,
   "q05_q95": [
-    -0.2808,
+    -0.07551999999999981,
     0.0021999999999999797
   ],
-  "p_beneficial": 0.08333333333333333,
-  "n_nonzero": 7,
-  "keep_success_rate": 0.5,
-  "learn_success_rate": 0.4444444444444444
+  "p_beneficial": 0.075,
+  "n_nonzero": 8,
+  "keep_success_rate": 0.475,
+  "learn_success_rate": 0.425
 }
