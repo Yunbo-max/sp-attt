@@ -279,7 +279,10 @@ class QwenTextPolicy:
             # A ReAct ``think`` transition is followed by an executable action.
             # This explicit turn boundary prevents Qwen3.5-4B from emitting the
             # same truncated thought indefinitely under a 16-token budget.
-            prompt += "\nThe previous turn was a thought. Now output only the next executable action.\n>"
+            choices = "\n".join(f"- {command}" for command in admissible)
+            prompt += ("\nThe previous turn was a thought. Now output exactly one executable "
+                       "action from this admissible list; do not output think or reasoning:\n"
+                       + choices + "\n>")
         inputs = self.tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}], add_generation_prompt=True,
             return_tensors="pt", return_dict=True, enable_thinking=False,
