@@ -1,0 +1,23 @@
+benchmark: mineexplorer
+model: Qwen/Qwen3-VL-8B-Instruct
+candidate_every_llm_decisions: 5
+visual_tower_frozen: true
+lora:
+  rank: 8
+  alpha: 16
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+inner:
+  learning_rate: 5.0e-4
+  gradient_steps: 2
+  attt_ngram: 3
+  attt_weight_floor: 0.05
+counterfactual:
+  horizon_llm_decisions: 20
+  disable_future_updates: true
+  checkpoints_per_episode: 2
+data:
+  generated_meta_train: {1: 250, 2: 250, 3: 250, 4: 250}
+  generated_meta_dev: {1: 50, 2: 50, 3: 50, 4: 50}
+  official_test: untouched
+gate_oracle_features_forbidden: [milestones, reasoning_graph, hidden_task_structure]
+

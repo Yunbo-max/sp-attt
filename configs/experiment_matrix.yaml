@@ -1,0 +1,23 @@
+methods:
+  - react
+  - in_context_summary
+  - ttt
+  - attt
+  - sequence_filter
+  - random_drop
+  - uncertainty_gate
+  - uncertainty_matched
+  - novelty_gate
+  - myopic_learned_gate
+  - sp_ttt
+  - sp_attt
+  - oracle
+matched_budget: true
+horizon_ablation: [1, 5, 10, 20, full]
+cadence_ablation: [1, 2, 5, 10]
+feature_ablation: [semantic_only, scalar_only, remove_novelty, remove_uncertainty]
+seeds: {alfworld: 5, mineexplorer: 3, swe_bench_lite: 3}
+statistics:
+  binary: [paired_bootstrap_95ci, mcnemar]
+  continuous: [paired_bootstrap_95ci, wilcoxon_signed_rank]
+

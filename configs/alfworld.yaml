@@ -1,0 +1,34 @@
+benchmark: alfworld
+model: Qwen/Qwen3.5-9B
+max_agent_steps: 50
+candidate_every: 5
+update_source: self
+decoding:
+  label_generation: {do_sample: false}
+lora:
+  rank: 8
+  alpha: 16
+  target_modules: [q_proj, k_proj, v_proj, o_proj]
+inner:
+  learning_rate: 5.0e-4
+  gradient_steps: 2
+  attt_ngram: 3
+  attt_weight_floor: 0.05
+counterfactual:
+  horizon: remaining
+  disable_future_updates: true
+  checkpoints_per_episode: 3
+data:
+  meta_train_episodes: 1800
+  meta_dev_episodes: 300
+  official_test_episodes: 140
+gate:
+  hidden_projection: 128
+  layers: [134, 256, 64, 1]
+  dropout: 0.1
+  learning_rate: 3.0e-4
+  weight_decay: 1.0e-4
+  batch_size: 128
+  max_epochs: 50
+  patience: 7
+
