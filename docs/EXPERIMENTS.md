@@ -15,7 +15,7 @@ plasticity metrics. Every aggregate retains per-episode records for paired resam
 
 ## Labels
 
-ALFWorld uses the remaining episode horizon and `success + 0.1 * success * (1 - T_finish/50)`.
+ALFWorld uses the remaining episode horizon and `success + 0.11 * success * (1 - T_finish/50)`. 
 MineExplorer uses 20 LLM decisions and `delta milestone fraction + task solved`. Environment frames
 never count as LLM decisions. Both branches disable later updates.
 

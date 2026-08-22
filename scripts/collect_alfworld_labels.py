@@ -16,6 +16,7 @@ from sp_attt.alfworld_runner import (
     make_alfworld_game_env,
     seed_everything,
 )
+from sp_attt.counterfactual import alfworld_return
 from sp_attt.types import CandidateExperience
 
 
@@ -35,24 +36,26 @@ def commands(info):
     return list(info["admissible_commands"][0])
 
 
-def rollout(policy, env, observation, info, history, horizon, max_new_tokens):
-    total = 0.0
+def rollout(policy, env, observation, info, history, horizon, max_new_tokens,
+            start_step, max_steps):
     done = False
     success = False
-    for _ in range(horizon):
+    finish_step = max_steps
+    for offset in range(horizon):
         current = observation
         action, _generation = policy.act(observation, history, commands(info), max_new_tokens)
         next_obs, scores, dones, infos = env.step([action])
-        total += float(scores[0])
         done = bool(dones[0])
         info_won = infos.get("won", [False])[0] if isinstance(infos, dict) else infos[0].get("won", False)
         success = bool(success or info_won or scores[0] > 0)
+        if success and finish_step == max_steps:
+            finish_step = start_step + offset + 1
         history.append((current, action))
         observation = next_obs[0]
         info = infos if isinstance(infos, dict) else infos[0]
         if done:
             break
-    return total, success, done
+    return alfworld_return(success, finish_step, max_steps), success, done
 
 
 def paired_label(policy, config, gamefile, actions, history, candidate, snapshot,
@@ -65,7 +68,7 @@ def paired_label(policy, config, gamefile, actions, history, candidate, snapshot
         if mode == "learn":
             policy.learner.update(candidate, "attt")
         total, success, done = rollout(policy, env, observation, info, list(history), horizon,
-                                       max_new_tokens)
+                                       max_new_tokens, candidate.step, candidate.max_steps)
         env.close()
         returns[mode] = {"return": total, "success": success, "done": done}
     policy.restore_adapter(snapshot)

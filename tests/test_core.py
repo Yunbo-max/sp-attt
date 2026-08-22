@@ -27,7 +27,7 @@ def test_gate_shape_and_decision():
 
 
 def test_returns_and_metrics():
-    assert alfworld_return(True, 25) == 1.05
+    assert alfworld_return(True, 25) == 1.055
     assert mineexplorer_return(1, 3, 4, True) == 1.5
     result = plasticity_metrics([-1, 2, 3], [True, False, True])
     assert result["harmful_update_rate"] == 0.5

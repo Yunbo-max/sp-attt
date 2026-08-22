@@ -29,11 +29,10 @@ def counterfactual_label(
 
 
 def alfworld_return(success: bool, finish_step: int, max_steps: int = 50) -> float:
-    return float(success) + (0.1 * (1.0 - finish_step / max_steps) if success else 0.0)
+    return float(success) + (0.11 * (1.0 - finish_step / max_steps) if success else 0.0)
 
 
 def mineexplorer_return(milestones_before: int, milestones_after: int,
                         total_milestones: int, solved: bool) -> float:
     progress = (milestones_after - milestones_before) / max(1, total_milestones)
     return progress + float(solved)
-
