@@ -1,0 +1,1 @@
+{"label_id": "0:10", "episode_id": "0", "checkpoint": 10, "gamefile": "/root/.cache/alfworld/json_2.1.1/train/look_at_obj_in_light-Pencil-None-DeskLamp-303/trial_T20190909_064607_933278/game.tw-pddl", "horizon": 40, "keep_return": 0.0, "learn_return": 0.0, "utility": 0.0, "keep_success": false, "learn_success": false, "seed": 0}
