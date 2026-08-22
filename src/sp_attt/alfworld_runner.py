@@ -192,6 +192,12 @@ def _clean_generation_line(generation: str) -> str:
 
 
 class QwenTextPolicy:
+    # Full ALFWorld transcripts can exceed the A4000's KV-cache budget long
+    # before the 50-step environment limit.  Keep the initial observation and
+    # only the most recent turns; the current observation still carries the
+    # live state needed for the next action.
+    max_history_turns = 12
+
     def __init__(self, model_name: str, *, use_lora: bool, rank: int = 8, alpha: int = 16,
                  lr: float = 5e-4, gradient_steps: int = 2):
         from transformers import AutoModelForImageTextToText, AutoTokenizer
@@ -263,8 +269,10 @@ class QwenTextPolicy:
                 return "\n" in tail
 
         initial = _alfworld_observation(history[0][0] if history else observation)
+        history_start = max(0, len(history) - self.max_history_turns)
         trajectory = ""
-        for index, (_before, action) in enumerate(history):
+        for index in range(history_start, len(history)):
+            _before, action = history[index]
             response = history[index + 1][0] if index + 1 < len(history) else observation
             trajectory += f" {action}\n{('OK.' if _is_think_action(action) else response)}\n>"
         # Qwen3.5 has an internal reasoning mode and, with the short decoding

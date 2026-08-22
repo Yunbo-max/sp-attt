@@ -10,6 +10,8 @@ import json
 import random
 from pathlib import Path
 
+import torch
+
 from sp_attt.alfworld_runner import (
     QwenTextPolicy,
     load_alfworld_config,
@@ -75,6 +77,8 @@ def paired_label(policy, config, gamefile, actions, history, candidate, snapshot
         total, success, done = rollout(policy, env, observation, info, branch_history, horizon,
                                        max_new_tokens, candidate.step, candidate.max_steps)
         env.close()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
         returns[mode] = {"return": total, "success": success, "done": done}
     policy.restore_adapter(snapshot)
     return returns
