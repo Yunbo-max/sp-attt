@@ -23,6 +23,8 @@ parser.add_argument("--config", default="configs/alfworld.yaml")
 parser.add_argument("--max-steps", type=int, default=50)
 parser.add_argument("--max-new-tokens", type=int, default=16)
 parser.add_argument("--output-dir", default="results/alfworld_baselines")
+parser.add_argument("--resume", action="store_true",
+                    help="Reuse complete per-seed JSONL files instead of rerunning them")
 args = parser.parse_args()
 
 output_dir = Path(args.output_dir)
@@ -30,10 +32,23 @@ output_dir.mkdir(parents=True, exist_ok=True)
 summary = []
 for seed in args.seeds:
     for method in args.methods:
+        path = output_dir / f"{args.split}_{method}_seed{seed}.jsonl"
+        if args.resume and path.exists():
+            with path.open(encoding="utf-8") as stream:
+                cached = [json.loads(line) for line in stream if line.strip()]
+            if len(cached) >= args.episodes:
+                summary.append({
+                    "split": args.split, "method": method, "seed": seed,
+                    "episodes": len(cached),
+                    "success_rate": sum(row["success"] for row in cached) / len(cached),
+                    "mean_steps": sum(row["steps"] for row in cached) / len(cached),
+                    "mean_updates": sum(row["updates"] for row in cached) / len(cached),
+                    "output": str(path), "resumed": True,
+                })
+                continue
         rows = run_alfworld(method, model_name=args.model, config_path=args.config,
                             episodes=args.episodes, seed=seed, split=args.split,
                             max_steps=args.max_steps, max_new_tokens=args.max_new_tokens)
-        path = output_dir / f"{args.split}_{method}_seed{seed}.jsonl"
         with path.open("w", encoding="utf-8") as stream:
             stream.writelines(json.dumps(asdict(row)) + "\n" for row in rows)
         summary.append({
