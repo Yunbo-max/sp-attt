@@ -103,7 +103,13 @@ if output_path.exists():
                 existing[row["label_id"]] = row
 config = load_alfworld_config(args.config, data_dir=args.data_dir, split=args.split, games=args.games)
 listing_wrapper, listing_env = make_alfworld_game_env(config)
-gamefiles = listing_wrapper.game_files[args.start_game : args.start_game + args.games]
+gamefiles = list(listing_wrapper.game_files)
+# Directory enumeration is deterministic but highly clustered by task/object.
+# Shuffle once with the experiment seed so checkpoints cover the train split
+# rather than a contiguous family of nearly identical trials.  The resulting
+# order is reproducible and is part of the label manifest's episode identity.
+random.Random(args.seed).shuffle(gamefiles)
+gamefiles = gamefiles[args.start_game : args.start_game + args.games]
 listing_env.close()
 policy = QwenTextPolicy(args.model, use_lora=True)
 
