@@ -96,6 +96,13 @@ python scripts/collect_alfworld_labels.py --split train --games 1800 \
   --output results/labels_train_remaining_500.jsonl
 ```
 
+The official 140-task ReAct/TTT/aTTT matrix is launched with:
+
+```bash
+python scripts/run_alfworld_matrix.py --episodes 140 --seeds 0 1 2 3 4 \
+  --output-dir results/alfworld_baselines
+```
+
 ## Experimental safeguards
 
 - Official test tasks never train the gate.
