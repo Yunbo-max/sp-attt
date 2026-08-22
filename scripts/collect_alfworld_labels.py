@@ -65,9 +65,14 @@ def paired_label(policy, config, gamefile, actions, history, candidate, snapshot
         policy.restore_adapter(snapshot)
         _wrapper, env = make_alfworld_game_env(config, gamefile)
         observation, info = replay(env, actions)
+        # ``history`` stops before the candidate action.  Replay has advanced the
+        # environment through that action, so include its observation/action pair
+        # when rebuilding the official ReAct prompt for the future rollout.
+        branch_history = list(history)
+        branch_history.append((candidate.observation, candidate.action))
         if mode == "learn":
             policy.learner.update(candidate, "attt")
-        total, success, done = rollout(policy, env, observation, info, list(history), horizon,
+        total, success, done = rollout(policy, env, observation, info, branch_history, horizon,
                                        max_new_tokens, candidate.step, candidate.max_steps)
         env.close()
         returns[mode] = {"return": total, "success": success, "done": done}
@@ -122,6 +127,7 @@ with output_path.open("a", encoding="utf-8") as stream:
         if len(existing) >= args.target_labels:
             break
         policy.reset_episode()
+        policy.set_gamefile(gamefile)
         wrapper, env = make_alfworld_game_env(config, gamefile)
         observation, info = env.reset(); observation = observation[0]
         history = []; actions = []; generations = []

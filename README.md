@@ -90,10 +90,16 @@ remaining episode horizon. It writes each valid JSONL row immediately, so a stop
 resumed with the same command; the `--max-new-tokens 8` setting is only for throughput during
 label generation (evaluation remains at 16).
 
+The ALFWorld runner uses the pinned public ReAct few-shot demonstrations (revision
+`6bdb3a1fd38b8188fc7ba4102969fe483df8fdc9`) and preserves `think:` actions as `OK.`
+transitions. The earlier `results/labels_train_zero_shot_legacy.jsonl` file was collected with
+the pre-reproduction zero-shot prompt and is retained only for debugging; it must not be mixed
+into formal baseline or counterfactual statistics.
+
 ```bash
 python scripts/collect_alfworld_labels.py --split train --games 1800 \
   --target-labels 500 --horizon remaining --max-new-tokens 8 \
-  --output results/labels_train_random_rewardfix_remaining_500.jsonl
+  --output results/labels_train_reactprompt_remaining_500.jsonl
 ```
 
 The official 140-task ReAct/TTT/aTTT matrix is launched with:

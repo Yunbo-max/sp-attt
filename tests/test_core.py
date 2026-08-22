@@ -48,6 +48,18 @@ def test_action_prefix_resolves_unique_object_suffix():
     assert action == "go to sidetable 1" and not fallback
 
 
+def test_action_matches_in_on_variant():
+    action, fallback = choose_action("put apple 1 in/on sidetable 1",
+                                     ["examine sidetable 1", "put apple 1 in sidetable 1"])
+    assert action == "put apple 1 in sidetable 1" and not fallback
+
+
+def test_react_put_maps_to_alfworld_move_command():
+    action, fallback = choose_action("put handtowel 1 in/on garbagecan 1",
+                                     ["examine garbagecan 1", "move handtowel 1 to garbagecan 1"])
+    assert action == "move handtowel 1 to garbagecan 1" and not fallback
+
+
 def test_skip_never_calls_inner_update():
     class Learner:
         def __init__(self):

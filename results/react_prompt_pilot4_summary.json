@@ -1,0 +1,13 @@
+{
+  "status": "prompt_and_parser_sanity_check",
+  "model": "Qwen/Qwen3.5-4B",
+  "split": "train",
+  "episodes": 1,
+  "max_steps": 10,
+  "max_new_tokens": 16,
+  "method": "react",
+  "success": true,
+  "steps": 6,
+  "fallback_actions": 0,
+  "note": "Uses pinned ReAct few-shot prompt, think/OK transitions, and put-to-move command normalization; this is a pipeline sanity check, not a benchmark estimate."
+}

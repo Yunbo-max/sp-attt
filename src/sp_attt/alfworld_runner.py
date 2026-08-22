@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
 import random
 import re
 from copy import deepcopy
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from urllib.request import urlopen
 
 import numpy as np
 import torch
@@ -95,15 +98,28 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", text)
 
 
+def _command_forms(text: str) -> set[str]:
+    normalized = _normalize(text)
+    forms = {normalized}
+    if " in/on " in normalized:
+        forms.add(normalized.replace(" in/on ", " in "))
+        forms.add(normalized.replace(" in/on ", " on "))
+    # ReAct demonstrations use ``put X in/on Y`` while ALFWorld's
+    # admissible-command surface uses the equivalent ``move X to Y`` form.
+    match = re.match(r"^put (.+) (?:in/on|in|on) (.+)$", normalized)
+    if match:
+        forms.add(f"move {match.group(1)} to {match.group(2)}")
+    return forms
+
+
 def choose_action(generation: str, admissible: list[str]) -> tuple[str, bool]:
     normalized = _normalize(generation)
     # Prefer a complete exact command, then a line containing one.
     for command in admissible:
-        c = _normalize(command)
-        if normalized == c or re.search(rf"(?m)^\s*{re.escape(c)}\s*[.!]?\s*$", normalized):
+        if _command_forms(generation) & _command_forms(command):
             return command, False
     for command in admissible:
-        if _normalize(command) in normalized:
+        if any(form in normalized for form in _command_forms(command)):
             return command, False
     # Qwen3.5-4B often omits a disambiguating numeric suffix while still
     # naming the intended action (e.g. ``go to sidetable`` for ``go to
@@ -114,10 +130,65 @@ def choose_action(generation: str, admissible: list[str]) -> tuple[str, bool]:
     if len(generation_tokens) >= 2:
         prefix = " ".join(generation_tokens)
         prefix_matches = [command for command in admissible
-                          if _normalize(command).startswith(prefix)]
+                          if any(form.startswith(prefix) for form in _command_forms(command))]
         if len(prefix_matches) == 1:
             return prefix_matches[0], False
     return admissible[0], True
+
+
+_REACT_TASK_PREFIXES = {
+    "pick_and_place": "put",
+    "pick_clean_then_place": "clean",
+    "pick_heat_then_place": "heat",
+    "pick_cool_then_place": "cool",
+    "look_at_obj": "examine",
+    "pick_two_obj": "puttwo",
+}
+
+
+def _alfworld_observation(observation: str) -> str:
+    """Match the observation normalization used by the public ReAct runner."""
+    parts = observation.split("\n\n", 1)
+    return parts[1] if len(parts) == 2 else observation
+
+
+def _react_task_prefix(gamefile: str | None) -> str:
+    if gamefile:
+        for prefix, task in _REACT_TASK_PREFIXES.items():
+            if prefix in gamefile:
+                return task
+    return "put"
+
+
+@lru_cache(maxsize=1)
+def _react_prompts() -> dict[str, str]:
+    url = ("https://raw.githubusercontent.com/ysymyth/ReAct/"
+           "6bdb3a1fd38b8188fc7ba4102969fe483df8fdc9/prompts/alfworld.json")
+    with urlopen(url, timeout=30) as response:
+        return json.loads(response.read().decode("utf-8"))
+
+
+def _load_react_prompt(task: str) -> str:
+    prompt_path = Path(__file__).resolve().parents[2] / "assets" / f"alfworld_react_{task}.json"
+    if prompt_path.exists():
+        with prompt_path.open(encoding="utf-8") as stream:
+            prompts = json.load(stream)
+    else:
+        # Pin the public ReAct prompt revision so a fresh checkout reproduces
+        # the same few-shot demonstrations without carrying a generated asset.
+        prompts = _react_prompts()
+    return ("Interact with a household to solve a task. Here are two examples.\n"
+            + prompts[f"react_{task}_1"] + prompts[f"react_{task}_0"]
+            + "\nHere is the task.\n")
+
+
+def _is_think_action(action: str) -> bool:
+    return _normalize(action).startswith("think:")
+
+
+def _clean_generation_line(generation: str) -> str:
+    line = next((line.strip() for line in generation.splitlines() if line.strip()), generation.strip())
+    return re.sub(r"^>\s*", "", line).strip()
 
 
 class QwenTextPolicy:
@@ -130,6 +201,7 @@ class QwenTextPolicy:
             device_map="cuda" if torch.cuda.is_available() else None, low_cpu_mem_usage=True,
         )
         self.learner = None
+        self._task_prompt = _load_react_prompt("put")
         self.initial_adapter: dict[str, torch.Tensor] | None = None
         if use_lora:
             self.model = attach_episode_lora(self.model, rank=rank, alpha=alpha)
@@ -138,6 +210,9 @@ class QwenTextPolicy:
             self.initial_adapter = {name: p.detach().cpu().clone()
                                     for name, p in self.model.named_parameters()
                                     if p.requires_grad}
+
+    def set_gamefile(self, gamefile: str | None) -> None:
+        self._task_prompt = _load_react_prompt(_react_task_prefix(gamefile))
 
     @property
     def device(self):
@@ -177,11 +252,12 @@ class QwenTextPolicy:
 
     def act(self, observation: str, history: list[tuple[str, str]], admissible: list[str],
             max_new_tokens: int = 96) -> tuple[str, str]:
-        recent = "\n".join(f"Observation: {o}\nAction: {a}" for o, a in history[-6:])
-        command_list = "\n".join(f"- {a}" for a in admissible)
-        prompt = ("You are an ALFWorld household agent. Reason briefly, then output exactly one "
-                  "valid action from the list.\n" + recent + f"\nObservation: {observation}\n"
-                  f"Valid actions:\n{command_list}\nAction:")
+        initial = _alfworld_observation(history[0][0] if history else observation)
+        trajectory = ""
+        for index, (_before, action) in enumerate(history):
+            response = history[index + 1][0] if index + 1 < len(history) else observation
+            trajectory += f" {action}\n{('OK.' if _is_think_action(action) else response)}\n>"
+        prompt = self._task_prompt + initial + "\n>" + trajectory
         inputs = self.tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}], add_generation_prompt=True,
             return_tensors="pt", return_dict=True, enable_thinking=False,
@@ -193,7 +269,10 @@ class QwenTextPolicy:
                                          pad_token_id=self.tokenizer.eos_token_id)
         generated = self.tokenizer.decode(output[0, inputs["input_ids"].shape[-1]:],
                                            skip_special_tokens=True)
-        return choose_action(generated, admissible)[0], generated
+        first_line = _clean_generation_line(generated)
+        if _is_think_action(first_line):
+            return first_line, generated
+        return choose_action(first_line, admissible)[0], generated
 
 
 def run_alfworld(method: str, *, model_name: str, config_path: str,
@@ -209,6 +288,8 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
         policy.reset_episode()
         observation, info = env.reset()
         observation = observation[0]
+        gamefile = info.get("extra.gamefile", [None])[0] if isinstance(info, dict) else None
+        policy.set_gamefile(gamefile)
         history: list[tuple[str, str]] = []
         trajectory: list[dict[str, Any]] = []
         updates = fallbacks = 0
@@ -217,7 +298,7 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
             admissible = list(info["admissible_commands"][0])
             action, generation = policy.act(observation, history, admissible,
                                              max_new_tokens=max_new_tokens)
-            if not any(_normalize(action) == _normalize(item) for item in admissible):
+            if not _is_think_action(action) and not any(_normalize(action) == _normalize(item) for item in admissible):
                 action, fallback = admissible[0], True
             else:
                 fallback = False
