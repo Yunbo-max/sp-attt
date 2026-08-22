@@ -78,6 +78,7 @@ parser.add_argument("--data-dir", default="/root/.cache/alfworld")
 parser.add_argument("--split", default="valid_seen")
 parser.add_argument("--target-labels", type=int, default=10)
 parser.add_argument("--games", type=int, default=10)
+parser.add_argument("--start-game", type=int, default=0)
 parser.add_argument("--max-steps", type=int, default=50)
 parser.add_argument("--candidate-every", type=int, default=5)
 parser.add_argument("--min-checkpoint", type=int, default=5)
@@ -100,12 +101,13 @@ if output_path.exists():
                 existing[row["label_id"]] = row
 config = load_alfworld_config(args.config, data_dir=args.data_dir, split=args.split, games=args.games)
 listing_wrapper, listing_env = make_alfworld_game_env(config)
-gamefiles = listing_wrapper.game_files[: args.games]
+gamefiles = listing_wrapper.game_files[args.start_game : args.start_game + args.games]
 listing_env.close()
 policy = QwenTextPolicy(args.model, use_lora=True)
 
 with output_path.open("a", encoding="utf-8") as stream:
-    for game_index, gamefile in enumerate(gamefiles):
+    for local_index, gamefile in enumerate(gamefiles):
+        game_index = args.start_game + local_index
         if len(existing) >= args.target_labels:
             break
         policy.reset_episode()
