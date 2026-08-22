@@ -87,8 +87,8 @@ python scripts/smoke_qwen35_4b.py
 
 The resumable meta-train label collector uses up to three stratified checkpoints per game and the
 remaining episode horizon. It writes each valid JSONL row immediately, so a stopped run can be
-resumed with the same command; the `--max-new-tokens 8` setting is only for throughput during
-label generation (evaluation remains at 16).
+resumed with the same command. Formal Qwen3.5-4B label generation uses greedy
+`--max-new-tokens 16`; evaluation uses the same decoding budget.
 
 The ALFWorld runner uses the pinned public ReAct few-shot demonstrations (revision
 `6bdb3a1fd38b8188fc7ba4102969fe483df8fdc9`) and preserves `think:` actions as `OK.`
@@ -98,7 +98,7 @@ into formal baseline or counterfactual statistics.
 
 ```bash
 python scripts/collect_alfworld_labels.py --split train --games 1800 \
-  --target-labels 500 --horizon remaining --max-new-tokens 8 \
+  --target-labels 500 --horizon remaining --max-new-tokens 16 \
   --output results/labels_train_reactprompt_remaining_500.jsonl
 ```
 
