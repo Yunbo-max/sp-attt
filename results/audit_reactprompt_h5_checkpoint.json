@@ -1,0 +1,14 @@
+{
+  "n": 4,
+  "p_harmful": 0.0,
+  "mean": 0.0,
+  "median": 0.0,
+  "q05_q95": [
+    0.0,
+    0.0
+  ],
+  "p_beneficial": 0.0,
+  "n_nonzero": 0,
+  "keep_success_rate": 0.0,
+  "learn_success_rate": 0.0
+}

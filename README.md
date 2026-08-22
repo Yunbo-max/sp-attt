@@ -102,6 +102,19 @@ python scripts/collect_alfworld_labels.py --split train --games 1800 \
   --output results/labels_train_reactprompt_remaining_500.jsonl
 ```
 
+For a cheaper pipeline smoke test, a short-horizon pilot can be resumed with `--horizon 5` and
+one checkpoint per game:
+
+```bash
+python scripts/collect_alfworld_labels.py --split train --games 1800 \
+  --target-labels 500 --max-checkpoints-per-game 1 --horizon 5 \
+  --max-new-tokens 16 --output results/labels_train_reactprompt_h5_500.jsonl
+```
+
+The H=5 file is diagnostic pilot data only; it must not be pooled with the formal
+`--horizon remaining` labels or used as evidence for the final horizon ablation. Its audit is
+stored separately in `results/audit_reactprompt_h5_checkpoint.json`.
+
 The official 140-task ReAct/TTT/aTTT matrix is launched with:
 
 ```bash
