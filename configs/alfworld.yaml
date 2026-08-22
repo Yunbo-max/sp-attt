@@ -1,5 +1,5 @@
 benchmark: alfworld
-model: Qwen/Qwen3.5-9B
+model: Qwen/Qwen3.5-4B
 max_agent_steps: 50
 candidate_every: 5
 update_source: self
@@ -31,4 +31,3 @@ gate:
   batch_size: 128
   max_epochs: 50
   patience: 7
-

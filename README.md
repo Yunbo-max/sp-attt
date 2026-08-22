@@ -64,7 +64,8 @@ The primary specifications are [configs/alfworld.yaml](configs/alfworld.yaml),
 
 ## Reproducible experiment order
 
-1. Reproduce ReAct and aTTT on Qwen3.5-9B + the 140 official ALFWorld evaluation games.
+1. Reproduce ReAct and aTTT on Qwen3.5-4B + the 140 official ALFWorld evaluation games; reserve
+   Qwen3.5-9B for a smaller confirmatory comparison if the 4B oracle audit passes.
 2. Run an oracle audit on 500–1,000 held-out opportunities; stop if harmful updates are negligible.
 3. Generate 1,000–2,000 paired labels, train the minimal gate, and require held-out AUROC above
    chance before scaling.
@@ -76,6 +77,12 @@ Label JSONL rows can be audited with:
 
 ```bash
 python scripts/audit_labels.py results/labels.jsonl
+```
+
+A real Qwen3.5-4B bf16 LoRA update smoke test is available (it downloads model weights):
+
+```bash
+python scripts/smoke_qwen35_4b.py
 ```
 
 ## Experimental safeguards
@@ -94,4 +101,3 @@ python scripts/audit_labels.py results/labels.jsonl
 - Wang et al., *No Time Like the Present: Agentic Test-Time Training for LLM Agents*, 2026.
 - Ju et al., *MineExplorer: Evaluating Open-World Exploration of MLLM Agents in Minecraft*, 2026.
 - Shridhar et al., *ALFWorld: Aligning Text and Embodied Environments for Interactive Learning*, 2021.
-
