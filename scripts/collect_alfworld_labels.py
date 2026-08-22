@@ -8,6 +8,7 @@ rows.
 import argparse
 import json
 import random
+import traceback
 from pathlib import Path
 
 import torch
@@ -63,24 +64,31 @@ def rollout(policy, env, observation, info, history, horizon, max_new_tokens,
 def paired_label(policy, config, gamefile, actions, history, candidate, snapshot,
                  horizon, max_new_tokens):
     returns = {}
-    for mode in ("keep", "learn"):
+    try:
+        for mode in ("keep", "learn"):
+            policy.restore_adapter(snapshot)
+            env = None
+            try:
+                _wrapper, env = make_alfworld_game_env(config, gamefile)
+                observation, info = replay(env, actions)
+                # ``history`` stops before the candidate action.  Replay has advanced the
+                # environment through that action, so include its observation/action pair
+                # when rebuilding the official ReAct prompt for the future rollout.
+                branch_history = list(history)
+                branch_history.append((candidate.observation, candidate.action))
+                if mode == "learn":
+                    policy.learner.update(candidate, "attt")
+                total, success, done = rollout(policy, env, observation, info, branch_history,
+                                               horizon, max_new_tokens, candidate.step,
+                                               candidate.max_steps)
+                returns[mode] = {"return": total, "success": success, "done": done}
+            finally:
+                if env is not None:
+                    env.close()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+    finally:
         policy.restore_adapter(snapshot)
-        _wrapper, env = make_alfworld_game_env(config, gamefile)
-        observation, info = replay(env, actions)
-        # ``history`` stops before the candidate action.  Replay has advanced the
-        # environment through that action, so include its observation/action pair
-        # when rebuilding the official ReAct prompt for the future rollout.
-        branch_history = list(history)
-        branch_history.append((candidate.observation, candidate.action))
-        if mode == "learn":
-            policy.learner.update(candidate, "attt")
-        total, success, done = rollout(policy, env, observation, info, branch_history, horizon,
-                                       max_new_tokens, candidate.step, candidate.max_steps)
-        env.close()
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-        returns[mode] = {"return": total, "success": success, "done": done}
-    policy.restore_adapter(snapshot)
     return returns
 
 
@@ -108,13 +116,20 @@ if args.horizon == "remaining" and args.max_steps <= args.min_checkpoint:
 
 seed_everything(args.seed)
 output_path = Path(args.output)
+errors_path = output_path.with_suffix(output_path.suffix + ".errors.jsonl")
 existing = {}
+failed = set()
 if output_path.exists():
     with output_path.open(encoding="utf-8") as stream:
         for line in stream:
             if line.strip():
                 row = json.loads(line)
                 existing[row["label_id"]] = row
+if errors_path.exists():
+    with errors_path.open(encoding="utf-8") as stream:
+        for line in stream:
+            if line.strip():
+                failed.add(json.loads(line)["label_id"])
 config = load_alfworld_config(args.config, data_dir=args.data_dir, split=args.split, games=args.games)
 listing_wrapper, listing_env = make_alfworld_game_env(config)
 gamefiles = list(listing_wrapper.game_files)
@@ -127,7 +142,7 @@ gamefiles = gamefiles[args.start_game : args.start_game + args.games]
 listing_env.close()
 policy = QwenTextPolicy(args.model, use_lora=True)
 
-with output_path.open("a", encoding="utf-8") as stream:
+with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", encoding="utf-8") as error_stream:
     for local_index, gamefile in enumerate(gamefiles):
         game_index = args.start_game + local_index
         if len(existing) >= args.target_labels:
@@ -193,12 +208,27 @@ with output_path.open("a", encoding="utf-8") as stream:
             text = f"Generation: {generations[-1]}\nAction: {actions[-1]}"
             candidate = CandidateExperience(str(game_index), step // args.candidate_every, text,
                                              action, current, step, args.max_steps)
-            if label_id not in existing:
+            if label_id not in existing and label_id not in failed:
                 horizon = args.max_steps - step if args.horizon == "remaining" else int(args.horizon)
                 if horizon <= 0:
                     raise ValueError(f"non-positive counterfactual horizon at checkpoint {step}")
-                returns = paired_label(policy, config, gamefile, actions, history, candidate,
-                                       snapshot, horizon, args.max_new_tokens)
+                try:
+                    returns = paired_label(policy, config, gamefile, actions, history, candidate,
+                                           snapshot, horizon, args.max_new_tokens)
+                except Exception as exc:
+                    error_row = {
+                        "label_id": label_id, "episode_id": str(game_index),
+                        "checkpoint": step, "gamefile": gamefile,
+                        "error_type": type(exc).__name__, "error": str(exc),
+                        "traceback": traceback.format_exc(),
+                    }
+                    error_stream.write(json.dumps(error_row) + "\n")
+                    error_stream.flush()
+                    failed.add(label_id)
+                    print(json.dumps({"skipped_label": label_id,
+                                      "error_type": type(exc).__name__}), flush=True)
+                    policy.restore_adapter(snapshot)
+                    continue
                 row = {
                     "label_id": label_id, "episode_id": str(game_index), "checkpoint": step,
                     "gamefile": gamefile, "horizon": horizon,
