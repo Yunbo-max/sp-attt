@@ -5,8 +5,10 @@ from sp_attt.counterfactual import alfworld_return, mineexplorer_return
 from sp_attt.gate import PlasticityGate
 from sp_attt.metrics import plasticity_metrics
 from sp_attt.novelty import attt_token_weights, sequence_novelty
+from sp_attt.online import SelectivePlasticity
+from sp_attt.policy import Decision, GatePolicy
 from sp_attt.sampling import stratified_checkpoints
-from sp_attt.types import GateFeatures
+from sp_attt.types import CandidateExperience, GateFeatures
 
 
 def test_attt_repeated_ngram_is_downweighted():
@@ -44,3 +46,23 @@ def test_stratified_checkpoints():
 def test_action_prefix_resolves_unique_object_suffix():
     action, fallback = choose_action("go to sidetable", ["go to bed 1", "go to sidetable 1"])
     assert action == "go to sidetable 1" and not fallback
+
+
+def test_skip_never_calls_inner_update():
+    class Learner:
+        def __init__(self):
+            self.calls = 0
+
+        def update(self, experience, method):
+            self.calls += 1
+            return 0.25
+
+    learner = Learner()
+    controller = SelectivePlasticity(learner, lambda _features: -0.1,
+                                      GatePolicy("sp"), inner_method="attt")
+    experience = CandidateExperience("e", 1, "x", "a", "o", 5, 50)
+    features = GateFeatures(torch.zeros(16), 0, 0, 0, 0, 0, 0.1)
+    result = controller.opportunity(experience, features)
+    assert result.decision is Decision.SKIP
+    assert result.update_loss is None
+    assert learner.calls == 0
