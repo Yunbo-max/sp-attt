@@ -84,11 +84,12 @@ def paired_label(policy, config, gamefile, actions, history, candidate, snapshot
             try:
                 _wrapper, env = make_alfworld_game_env(config, gamefile)
                 observation, info = replay(env, actions)
-                # ``history`` stops before the candidate action.  Replay has advanced the
-                # environment through that action, so include its observation/action pair
-                # when rebuilding the official ReAct prompt for the future rollout.
+                # ``history`` already includes the candidate pair: the online loop appends
+                # it immediately after stepping the candidate action.  Replay advances the
+                # counterfactual environment through that action too, so appending it here
+                # would duplicate the experience in the future ReAct prompt and change the
+                # policy for the wrong reason.
                 branch_history = list(history)
-                branch_history.append((candidate.observation, candidate.action))
                 if mode == "learn":
                     policy.learner.update(candidate, "attt")
                 total, success, done = rollout(policy, env, observation, info, branch_history,
