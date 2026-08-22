@@ -122,9 +122,7 @@ with output_path.open("a", encoding="utf-8") as stream:
                 continue
             label_id = f"{game_index}:{step}"
             snapshot = policy.snapshot_adapter()
-            text = "\n".join(f"Generation: {g}\nAction: {a}"
-                              for g, a in zip(generations[-args.candidate_every:],
-                                               actions[-args.candidate_every:]))
+            text = f"Generation: {generations[-1]}\nAction: {actions[-1]}"
             candidate = CandidateExperience(str(game_index), step // args.candidate_every, text,
                                              action, current, step, args.max_steps)
             if label_id not in existing:

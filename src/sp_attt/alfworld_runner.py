@@ -152,7 +152,7 @@ class QwenTextPolicy:
                   f"Valid actions:\n{command_list}\nAction:")
         inputs = self.tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}], add_generation_prompt=True,
-            return_tensors="pt", return_dict=True,
+            return_tensors="pt", return_dict=True, enable_thinking=False,
         )
         inputs = {key: value.to(self.device) for key, value in inputs.items()
                   if torch.is_tensor(value)}
@@ -202,7 +202,9 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                                "action": action, "reward": float(scores[0]), "done": bool(dones[0])})
             history.append((observation, action))
             if method in {"ttt", "attt"} and step % candidate_every == 0 and not dones[0]:
-                text = "\n".join(f"Observation: {o}\nAction: {a}" for o, a in history[-candidate_every:])
+                # aTTT's primary Self signal trains only the latest reasoning/action,
+                # not a replay of the whole prefix.
+                text = f"Generation: {generation}\nAction: {action}"
                 experience = CandidateExperience(str(episode), step // candidate_every, text, action,
                                                  observation, step, max_steps)
                 policy.learner.update(experience, method)

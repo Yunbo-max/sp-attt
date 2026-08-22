@@ -63,7 +63,7 @@ for step in range(args.checkpoint):
     history.append((current_observation, action)); actions.append(action); generations.append(generation)
     if done:
         raise RuntimeError("episode terminated before checkpoint")
-candidate_text = "\n".join(f"Generation: {g}\nAction: {a}" for g, a in zip(generations, actions))
+candidate_text = f"Generation: {generations[-1]}\nAction: {actions[-1]}"
 candidate = CandidateExperience("label-0", args.checkpoint // 5, candidate_text, actions[-1],
                                 observation, args.checkpoint, 50)
 base_env.close()
