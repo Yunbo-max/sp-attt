@@ -145,6 +145,12 @@ with output_path.open("a", encoding="utf-8") as stream:
         for bucket in bins:
             if bucket:
                 candidate_steps.append(rng.choice(bucket))
+        # When collecting fewer than three opportunities, sample among the
+        # strata rather than always taking the earliest bucket.  This preserves
+        # coverage of early/middle/late checkpoints while keeping at most the
+        # requested number per episode.
+        if len(candidate_steps) > args.max_checkpoints_per_game:
+            candidate_steps = rng.sample(candidate_steps, args.max_checkpoints_per_game)
         if len(candidate_steps) < args.max_checkpoints_per_game:
             remaining = [step for step in eligible if step not in candidate_steps]
             rng.shuffle(remaining)

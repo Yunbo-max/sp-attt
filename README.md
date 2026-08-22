@@ -85,7 +85,7 @@ A real Qwen3.5-4B bf16 LoRA update smoke test is available (it downloads model w
 python scripts/smoke_qwen35_4b.py
 ```
 
-The resumable meta-train label collector uses three stratified checkpoints per game and the
+The resumable meta-train label collector uses up to three stratified checkpoints per game and the
 remaining episode horizon. It writes each valid JSONL row immediately, so a stopped run can be
 resumed with the same command; the `--max-new-tokens 8` setting is only for throughput during
 label generation (evaluation remains at 16).
