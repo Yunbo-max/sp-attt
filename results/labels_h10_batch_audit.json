@@ -1,0 +1,14 @@
+{
+  "dataset": "ALFWorld valid_seen",
+  "model": "Qwen/Qwen3.5-4B",
+  "decoding": {"enable_thinking": false, "max_new_tokens": 16},
+  "n": 10,
+  "checkpoint": 5,
+  "horizon": 10,
+  "keep_successes": 2,
+  "learn_successes": 2,
+  "p_harmful": 0.0,
+  "p_beneficial": 0.0,
+  "mean_utility": 0.0,
+  "interpretation": "Both branches had identical terminal outcomes on all ten labels. This is an informative pilot but not the final 500-1000-example audit; later checkpoints and remaining-horizon labels are required."
+}
