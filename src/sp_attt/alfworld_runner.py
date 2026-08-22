@@ -275,6 +275,11 @@ class QwenTextPolicy:
         prompt = (self._task_prompt + initial + "\n>" + trajectory
                   + "\nContinue the interaction. Output one next action; do not repeat a previous "
                     "think line.\n>")
+        if history and _is_think_action(history[-1][1]):
+            # A ReAct ``think`` transition is followed by an executable action.
+            # This explicit turn boundary prevents Qwen3.5-4B from emitting the
+            # same truncated thought indefinitely under a 16-token budget.
+            prompt += "\nThe previous turn was a thought. Now output only the next executable action.\n>"
         inputs = self.tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}], add_generation_prompt=True,
             return_tensors="pt", return_dict=True, enable_thinking=False,
