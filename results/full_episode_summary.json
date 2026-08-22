@@ -1,0 +1,15 @@
+{
+  "status": "single_episode_instrumentation_run_not_statistical_benchmark",
+  "date": "2026-08-22",
+  "model": "Qwen/Qwen3.5-4B",
+  "benchmark": "ALFWorld valid_seen TextWorld",
+  "decoding": {"do_sample": false, "max_new_tokens": 24},
+  "episodes": 1,
+  "max_steps": 50,
+  "results": {
+    "react": {"successes": 0, "success_rate": 0.0, "mean_steps": 50.0, "mean_updates": 0.0},
+    "ttt": {"successes": 0, "success_rate": 0.0, "mean_steps": 50.0, "mean_updates": 9.0},
+    "attt": {"successes": 0, "success_rate": 0.0, "mean_steps": 50.0, "mean_updates": 9.0}
+  },
+  "interpretation": "All three runs reached the 50-step cap without success on this one task. This is a pipeline and cost sanity check, not evidence about relative method quality. Multi-seed, full-task evaluation is still required."
+}
