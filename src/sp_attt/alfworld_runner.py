@@ -267,7 +267,14 @@ class QwenTextPolicy:
         for index, (_before, action) in enumerate(history):
             response = history[index + 1][0] if index + 1 < len(history) else observation
             trajectory += f" {action}\n{('OK.' if _is_think_action(action) else response)}\n>"
-        prompt = self._task_prompt + initial + "\n>" + trajectory
+        # Qwen3.5 has an internal reasoning mode and, with the short decoding
+        # budget used by this benchmark, can otherwise repeat the same
+        # ``think:`` line forever.  Keep the official ReAct transcript, but
+        # make the next-turn contract explicit: emit one executable command
+        # (or a fresh think line) and never copy a previous thought verbatim.
+        prompt = (self._task_prompt + initial + "\n>" + trajectory
+                  + "\nContinue the interaction. Output one next action; do not repeat a previous "
+                    "think line.\n>")
         inputs = self.tokenizer.apply_chat_template(
             [{"role": "user", "content": prompt}], add_generation_prompt=True,
             return_tensors="pt", return_dict=True, enable_thinking=False,
