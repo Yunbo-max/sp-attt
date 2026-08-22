@@ -31,3 +31,10 @@ ALFWorld uses five seeds and MineExplorer three. Report paired bootstrap 95% con
 McNemar for paired success; paired bootstrap and supplemental Wilcoxon for MSR. Thresholds and
 matched update budgets are selected on meta-dev only.
 
+## Local execution notes
+
+ALFWorld is installed with `alfworld-download` and uses the official `valid_seen`/`valid_unseen`
+splits. The Qwen3.5-4B runner is `scripts/run_alfworld_pilot.py`; `--max-steps 50` and
+`--max-new-tokens 24` are the intended evaluation defaults. The A4000 smoke pilot uses eight new
+tokens only to keep iteration time bounded. Its measured output is recorded in
+`results/pilot_summary.json` and is explicitly not a benchmark claim.

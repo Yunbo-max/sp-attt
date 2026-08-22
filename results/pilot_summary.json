@@ -1,0 +1,20 @@
+{
+  "status": "pipeline_pilot_only_not_benchmark_result",
+  "date": "2026-08-22",
+  "model": "Qwen/Qwen3.5-4B",
+  "benchmark": "ALFWorld valid_seen TextWorld",
+  "decoding": {"do_sample": false, "max_new_tokens": 8},
+  "episodes": 1,
+  "max_steps": 5,
+  "results": {
+    "react": {"success_rate": 0.0, "steps": 5, "updates": 0},
+    "ttt": {"success_rate": 0.0, "steps": 5, "updates": 1},
+    "attt": {"success_rate": 0.0, "steps": 5, "updates": 1}
+  },
+  "interpretation": "This validates environment interaction, action parsing, LoRA attachment, and one update at K=5. It is not a performance estimate and must not be cited as a benchmark result.",
+  "commands": [
+    "python scripts/run_alfworld_pilot.py --method react --episodes 1 --split valid_seen --max-steps 5 --max-new-tokens 8 --output results/react_pilot.jsonl",
+    "python scripts/run_alfworld_pilot.py --method ttt --episodes 1 --split valid_seen --max-steps 5 --max-new-tokens 8 --output results/ttt_pilot.jsonl",
+    "python scripts/run_alfworld_pilot.py --method attt --episodes 1 --split valid_seen --max-steps 5 --max-new-tokens 8 --output results/attt_pilot.jsonl"
+  ]
+}
