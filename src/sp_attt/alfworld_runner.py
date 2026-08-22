@@ -38,6 +38,11 @@ def load_alfworld_config(config_path: str, *, data_dir: str, split: str, games: 
     config["dataset"]["eval_ood_data_path"] = str(Path(data_dir) / "json_2.1.1" / "valid_unseen")
     config["dataset"]["num_train_games"] = games if split == "train" else -1
     config["dataset"]["num_eval_games"] = games if split != "train" else -1
+    # Keep the requested split alongside the ALFWorld config.  The wrapper's
+    # ``train_eval`` argument controls which of data_path/eval_id_data_path/
+    # eval_ood_data_path is enumerated; losing this value silently turns a
+    # meta-train request into valid_seen evaluation.
+    config["_sp_split"] = split
     config["logic"]["domain"] = str(Path(data_dir) / "logic" / "alfred.pddl")
     config["logic"]["grammar"] = str(Path(data_dir) / "logic" / "alfred.twl2")
     config["general"]["use_cuda"] = torch.cuda.is_available()
@@ -59,10 +64,16 @@ def seed_everything(seed: int) -> None:
     if torch.cuda.is_available(): torch.cuda.manual_seed_all(seed)
 
 
-def make_alfworld_game_env(config: dict, gamefile: str | None = None):
+def make_alfworld_game_env(config: dict, gamefile: str | None = None,
+                           train_eval: str | None = None):
     """Create a one-game eval environment, optionally forcing an exact gamefile."""
     from alfworld.agents.environment import get_environment
-    wrapper = get_environment(config["env"]["type"])(config, train_eval="eval_in_distribution")
+    if train_eval is None:
+        split = config.get("_sp_split", "valid_seen")
+        train_eval = "train" if split == "train" else (
+            "eval_out_of_distribution" if split == "valid_unseen" else "eval_in_distribution"
+        )
+    wrapper = get_environment(config["env"]["type"])(config, train_eval=train_eval)
     if gamefile is not None:
         wrapper.game_files = [gamefile]
         wrapper.num_games = 1
