@@ -281,11 +281,14 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                  candidate_every: int = 5, max_new_tokens: int = 24) -> list[EpisodeResult]:
     seed_everything(seed)
     config = load_alfworld_config(config_path, data_dir=data_dir, split=split, games=episodes)
-    _wrapper, env = make_alfworld_game_env(config)
+    listing_wrapper, listing_env = make_alfworld_game_env(config)
+    gamefiles = list(listing_wrapper.game_files)[:episodes]
+    listing_env.close()
     policy = QwenTextPolicy(model_name, use_lora=method in {"ttt", "attt"})
     results = []
-    for episode in range(episodes):
+    for episode, gamefile in enumerate(gamefiles):
         policy.reset_episode()
+        _wrapper, env = make_alfworld_game_env(config, gamefile)
         observation, info = env.reset()
         observation = observation[0]
         gamefile = info.get("extra.gamefile", [None])[0] if isinstance(info, dict) else None
@@ -327,5 +330,5 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
             if dones[0]:
                 break
         results.append(EpisodeResult(episode, method, success, step, updates, fallbacks, trajectory))
-    env.close()
+        env.close()
     return results

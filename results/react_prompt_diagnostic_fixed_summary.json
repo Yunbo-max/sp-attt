@@ -1,0 +1,12 @@
+{
+  "status": "task_order_diagnostic_not_benchmark",
+  "model": "Qwen/Qwen3.5-4B",
+  "split": "train",
+  "episodes": 3,
+  "distinct_gamefiles": 3,
+  "method": "react",
+  "successes": 3,
+  "success_rate": 1.0,
+  "mean_steps": 6.0,
+  "note": "Each episode now uses a distinct exact gamefile; the first three ALFWorld files are same-family easy HandTowel tasks, so this is only a task-order/runner diagnostic, not a benchmark estimate."
+}
