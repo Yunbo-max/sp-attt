@@ -86,6 +86,8 @@ parser.add_argument("--max-new-tokens", type=int, default=8)
 parser.add_argument("--seed", type=int, default=0)
 parser.add_argument("--output", required=True)
 args = parser.parse_args()
+if args.horizon == "remaining" and args.max_steps <= args.min_checkpoint:
+    raise ValueError("remaining horizon must be positive: set max_steps > min_checkpoint")
 
 seed_everything(args.seed)
 output_path = Path(args.output)
@@ -136,6 +138,8 @@ with output_path.open("a", encoding="utf-8") as stream:
                                              action, current, step, args.max_steps)
             if label_id not in existing:
                 horizon = args.max_steps - step if args.horizon == "remaining" else int(args.horizon)
+                if horizon <= 0:
+                    raise ValueError(f"non-positive counterfactual horizon at checkpoint {step}")
                 returns = paired_label(policy, config, gamefile, actions, history, candidate,
                                        snapshot, horizon, args.max_new_tokens)
                 row = {
