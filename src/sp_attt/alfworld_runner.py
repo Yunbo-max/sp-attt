@@ -252,6 +252,16 @@ class QwenTextPolicy:
 
     def act(self, observation: str, history: list[tuple[str, str]], admissible: list[str],
             max_new_tokens: int = 96) -> tuple[str, str]:
+        from transformers import StoppingCriteria, StoppingCriteriaList
+
+        class StopAtNewline(StoppingCriteria):
+            def __init__(self, tokenizer):
+                self.tokenizer = tokenizer
+
+            def __call__(self, input_ids, scores, **kwargs):
+                tail = self.tokenizer.decode(input_ids[0, -1:], skip_special_tokens=False)
+                return "\n" in tail
+
         initial = _alfworld_observation(history[0][0] if history else observation)
         trajectory = ""
         for index, (_before, action) in enumerate(history):
@@ -266,7 +276,8 @@ class QwenTextPolicy:
                   if torch.is_tensor(value)}
         with torch.inference_mode():
             output = self.model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False,
-                                         pad_token_id=self.tokenizer.eos_token_id)
+                                         pad_token_id=self.tokenizer.eos_token_id,
+                                         stopping_criteria=StoppingCriteriaList([StopAtNewline(self.tokenizer)]))
         generated = self.tokenizer.decode(output[0, inputs["input_ids"].shape[-1]:],
                                            skip_special_tokens=True)
         first_line = _clean_generation_line(generated)
