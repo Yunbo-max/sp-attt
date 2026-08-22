@@ -178,6 +178,14 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
             rng.shuffle(remaining)
             candidate_steps.extend(remaining[:args.max_checkpoints_per_game - len(candidate_steps)])
         candidate_steps = set(candidate_steps[:args.max_checkpoints_per_game])
+        # A resumable run should not regenerate an entire online episode when
+        # its deterministic opportunity is already labeled (or recorded as an
+        # environment error).  This is especially important on long ALFWorld
+        # prefixes, where replaying a covered game costs minutes.
+        covered = existing.keys() | failed
+        if not candidate_steps or all(f"{game_index}:{step}" in covered for step in candidate_steps):
+            env.close()
+            continue
         for step in range(1, args.max_steps + 1):
             current = observation
             action, generation = policy.act(observation, history, commands(info), args.max_new_tokens)
