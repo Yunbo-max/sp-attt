@@ -1,0 +1,12 @@
+{
+  "dataset": "ALFWorld valid_seen",
+  "model": "Qwen/Qwen3.5-4B",
+  "decoding": {"enable_thinking": false, "max_new_tokens": 16},
+  "checkpoint": 20,
+  "horizon": 5,
+  "n": 1,
+  "keep_return": 0.0,
+  "learn_return": 0.0,
+  "utility": 0.0,
+  "interpretation": "Late-checkpoint replay label; one sample only, not an audit estimate."
+}
