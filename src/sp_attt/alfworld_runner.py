@@ -196,7 +196,7 @@ class QwenTextPolicy:
     # before the 50-step environment limit.  Keep the initial observation and
     # only the most recent turns; the current observation still carries the
     # live state needed for the next action.
-    max_history_turns = 12
+    max_history_turns = 6
 
     def __init__(self, model_name: str, *, use_lora: bool, rank: int = 8, alpha: int = 16,
                  lr: float = 5e-4, gradient_steps: int = 2):
