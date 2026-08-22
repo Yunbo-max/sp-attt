@@ -179,12 +179,9 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                  data_dir: str = "/root/.cache/alfworld", split: str = "valid_seen",
                  episodes: int = 1, seed: int = 0, max_steps: int = 50,
                  candidate_every: int = 5, max_new_tokens: int = 24) -> list[EpisodeResult]:
-    from alfworld.agents.environment import get_environment
     seed_everything(seed)
     config = load_alfworld_config(config_path, data_dir=data_dir, split=split, games=episodes)
-    eval_split = "eval_out_of_distribution" if split == "valid_unseen" else "eval_in_distribution"
-    env = get_environment(config["env"]["type"])(config, train_eval=eval_split)
-    env = env.init_env(batch_size=1)
+    _wrapper, env = make_alfworld_game_env(config)
     policy = QwenTextPolicy(model_name, use_lora=method in {"ttt", "attt"})
     results = []
     for episode in range(episodes):

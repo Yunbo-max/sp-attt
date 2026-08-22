@@ -7,6 +7,7 @@ rows.
 
 import argparse
 import json
+import random
 from pathlib import Path
 
 from sp_attt.alfworld_runner import (
@@ -82,6 +83,7 @@ parser.add_argument("--start-game", type=int, default=0)
 parser.add_argument("--max-steps", type=int, default=50)
 parser.add_argument("--candidate-every", type=int, default=5)
 parser.add_argument("--min-checkpoint", type=int, default=5)
+parser.add_argument("--max-checkpoints-per-game", type=int, default=3)
 parser.add_argument("--horizon", default="1")
 parser.add_argument("--max-new-tokens", type=int, default=8)
 parser.add_argument("--seed", type=int, default=0)
@@ -114,6 +116,25 @@ with output_path.open("a", encoding="utf-8") as stream:
         wrapper, env = make_alfworld_game_env(config, gamefile)
         observation, info = env.reset(); observation = observation[0]
         history = []; actions = []; generations = []
+        eligible = [step for step in range(args.candidate_every, args.max_steps + 1,
+                                           args.candidate_every)
+                    if step >= args.min_checkpoint and
+                    (args.horizon != "remaining" or step < args.max_steps)]
+        # Match the protocol's three relative-position strata while keeping
+        # collection tractable and avoiding highly correlated adjacent labels.
+        rng = random.Random(args.seed + game_index)
+        bins = ([], [], [])
+        for step in eligible:
+            bins[min(2, int(3 * (step / args.max_steps)))].append(step)
+        candidate_steps = []
+        for bucket in bins:
+            if bucket:
+                candidate_steps.append(rng.choice(bucket))
+        if len(candidate_steps) < args.max_checkpoints_per_game:
+            remaining = [step for step in eligible if step not in candidate_steps]
+            rng.shuffle(remaining)
+            candidate_steps.extend(remaining[:args.max_checkpoints_per_game - len(candidate_steps)])
+        candidate_steps = set(candidate_steps[:args.max_checkpoints_per_game])
         for step in range(1, args.max_steps + 1):
             current = observation
             action, generation = policy.act(observation, history, commands(info), args.max_new_tokens)
@@ -128,6 +149,12 @@ with output_path.open("a", encoding="utf-8") as stream:
             if step < args.min_checkpoint:
                 # Keep the online aTTT trajectory evolving, but only materialize
                 # labels after the requested late-checkpoint warmup.
+                policy.learner.update(
+                    CandidateExperience(str(game_index), step // args.candidate_every,
+                                         f"Generation: {generation}\nAction: {action}", action,
+                                         current, step, args.max_steps), "attt")
+                continue
+            if step not in candidate_steps:
                 policy.learner.update(
                     CandidateExperience(str(game_index), step // args.candidate_every,
                                          f"Generation: {generation}\nAction: {action}", action,
