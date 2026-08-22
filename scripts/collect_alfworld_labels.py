@@ -207,6 +207,10 @@ with output_path.open("a", encoding="utf-8") as stream:
                 print(json.dumps(row), flush=True)
             policy.restore_adapter(snapshot)
             policy.learner.update(candidate, "attt")
+            # With one checkpoint per episode there is no downstream online
+            # trajectory needed for another label; stop after this paired branch.
+            if args.max_checkpoints_per_game == 1:
+                break
             if len(existing) >= args.target_labels:
                 break
         env.close()
