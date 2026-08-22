@@ -195,6 +195,18 @@ with output_path.open("a", encoding="utf-8") as stream:
                 row = {
                     "label_id": label_id, "episode_id": str(game_index), "checkpoint": step,
                     "gamefile": gamefile, "horizon": horizon,
+                    # Keep the predictor-visible checkpoint payload beside the
+                    # counterfactual target.  Without these fields a label file
+                    # can be audited, but it cannot train/replay a gate because
+                    # the candidate representation and history are gone.
+                    "candidate_text": text,
+                    "candidate_action": action,
+                    "candidate_observation": current,
+                    "history_update_texts": [
+                        f"Generation: {generation}\nAction: {past_action}"
+                        for generation, past_action in zip(generations[:-1], actions[:-1])
+                    ],
+                    "relative_position": step / args.max_steps,
                     "keep_return": returns["keep"]["return"],
                     "learn_return": returns["learn"]["return"],
                     "utility": returns["learn"]["return"] - returns["keep"]["return"],
