@@ -1,5 +1,6 @@
 import torch
 
+from sp_attt.alfworld_runner import choose_action
 from sp_attt.counterfactual import alfworld_return, mineexplorer_return
 from sp_attt.gate import PlasticityGate
 from sp_attt.metrics import plasticity_metrics
@@ -39,3 +40,7 @@ def test_stratified_checkpoints():
     assert len(points) == 3 and points == sorted(points)
     assert points[0] <= 17 < points[1] <= 34 < points[2]
 
+
+def test_action_prefix_resolves_unique_object_suffix():
+    action, fallback = choose_action("go to sidetable", ["go to bed 1", "go to sidetable 1"])
+    assert action == "go to sidetable 1" and not fallback

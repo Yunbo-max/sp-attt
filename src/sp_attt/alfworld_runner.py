@@ -105,6 +105,18 @@ def choose_action(generation: str, admissible: list[str]) -> tuple[str, bool]:
     for command in admissible:
         if _normalize(command) in normalized:
             return command, False
+    # Qwen3.5-4B often omits a disambiguating numeric suffix while still
+    # naming the intended action (e.g. ``go to sidetable`` for ``go to
+    # sidetable 1``).  Resolve only a sufficiently specific prefix and only
+    # when it maps to one command; otherwise retain the deterministic first
+    # admissible fallback rather than guessing between objects.
+    generation_tokens = normalized.split()
+    if len(generation_tokens) >= 2:
+        prefix = " ".join(generation_tokens)
+        prefix_matches = [command for command in admissible
+                          if _normalize(command).startswith(prefix)]
+        if len(prefix_matches) == 1:
+            return prefix_matches[0], False
     return admissible[0], True
 
 
