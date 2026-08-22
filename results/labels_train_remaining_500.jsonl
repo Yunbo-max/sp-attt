@@ -1,0 +1,1 @@
+{"label_id": "0:10", "episode_id": "0", "checkpoint": 10, "gamefile": "/root/.cache/alfworld/json_2.1.1/train/pick_and_place_simple-HandTowel-None-GarbageCan-416/trial_T20190908_234752_613977/game.tw-pddl", "horizon": 40, "keep_return": 0.0, "learn_return": 0.0, "utility": 0.0, "keep_success": false, "learn_success": false, "seed": 0}
