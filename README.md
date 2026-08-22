@@ -115,6 +115,10 @@ The H=5 file is diagnostic pilot data only; it must not be pooled with the forma
 `--horizon remaining` labels or used as evidence for the final horizon ablation. Its audit is
 stored separately in `results/audit_reactprompt_h5_checkpoint.json`.
 
+On memory-constrained GPUs, `--max-checkpoint 10` limits online prefix generation while keeping
+the paired label horizon at `remaining`; such capped labels are marked as a resource-bounded
+collection and should be analyzed separately from the full stratified protocol.
+
 The official 140-task ReAct/TTT/aTTT matrix is launched with:
 
 ```bash

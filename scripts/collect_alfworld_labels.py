@@ -95,6 +95,8 @@ parser.add_argument("--start-game", type=int, default=0)
 parser.add_argument("--max-steps", type=int, default=50)
 parser.add_argument("--candidate-every", type=int, default=5)
 parser.add_argument("--min-checkpoint", type=int, default=5)
+parser.add_argument("--max-checkpoint", type=int, default=None,
+                    help="Optional cap on candidate step for resource-bounded runs")
 parser.add_argument("--max-checkpoints-per-game", type=int, default=3)
 parser.add_argument("--horizon", default="1")
 parser.add_argument("--max-new-tokens", type=int, default=8)
@@ -138,6 +140,7 @@ with output_path.open("a", encoding="utf-8") as stream:
         eligible = [step for step in range(args.candidate_every, args.max_steps + 1,
                                            args.candidate_every)
                     if step >= args.min_checkpoint and
+                    (args.max_checkpoint is None or step <= args.max_checkpoint) and
                     (args.horizon != "remaining" or step < args.max_steps)]
         # Match the protocol's three relative-position strata while keeping
         # collection tractable and avoiding highly correlated adjacent labels.
