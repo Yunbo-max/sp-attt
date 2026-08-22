@@ -80,6 +80,7 @@ parser.add_argument("--target-labels", type=int, default=10)
 parser.add_argument("--games", type=int, default=10)
 parser.add_argument("--max-steps", type=int, default=50)
 parser.add_argument("--candidate-every", type=int, default=5)
+parser.add_argument("--min-checkpoint", type=int, default=5)
 parser.add_argument("--horizon", default="1")
 parser.add_argument("--max-new-tokens", type=int, default=8)
 parser.add_argument("--seed", type=int, default=0)
@@ -119,6 +120,14 @@ with output_path.open("a", encoding="utf-8") as stream:
             observation = next_obs[0]
             info = infos if isinstance(infos, dict) else infos[0]
             if step % args.candidate_every != 0:
+                continue
+            if step < args.min_checkpoint:
+                # Keep the online aTTT trajectory evolving, but only materialize
+                # labels after the requested late-checkpoint warmup.
+                policy.learner.update(
+                    CandidateExperience(str(game_index), step // args.candidate_every,
+                                         f"Generation: {generation}\nAction: {action}", action,
+                                         current, step, args.max_steps), "attt")
                 continue
             label_id = f"{game_index}:{step}"
             snapshot = policy.snapshot_adapter()
