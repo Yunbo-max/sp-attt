@@ -73,10 +73,19 @@ def make_alfworld_game_env(config: dict, gamefile: str | None = None,
         train_eval = "train" if split == "train" else (
             "eval_out_of_distribution" if split == "valid_unseen" else "eval_in_distribution"
         )
-    wrapper = get_environment(config["env"]["type"])(config, train_eval=train_eval)
-    if gamefile is not None:
-        wrapper.game_files = [gamefile]
-        wrapper.num_games = 1
+    env_class = get_environment(config["env"]["type"])
+    if gamefile is None:
+        wrapper = env_class(config, train_eval=train_eval)
+    else:
+        # AlfredTWEnv normally walks every task directory during __init__. A
+        # counterfactual branch already names its exact gamefile, so bypass
+        # that scan without changing any environment behavior after init.
+        class SingleGameEnv(env_class):
+            def collect_game_files(self, verbose=False):
+                self.game_files = [gamefile]
+                self.num_games = 1
+
+        wrapper = SingleGameEnv(config, train_eval=train_eval)
     return wrapper, wrapper.init_env(batch_size=1)
 
 
