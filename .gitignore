@@ -7,7 +7,5 @@ dist/
 *.egg-info/
 checkpoints/
 data/
-results/*.jsonl
 results/*.csv
 results/*.png
-

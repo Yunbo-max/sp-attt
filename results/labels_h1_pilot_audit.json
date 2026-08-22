@@ -1,0 +1,11 @@
+{
+  "dataset": "ALFWorld valid_seen",
+  "model": "Qwen/Qwen3.5-4B",
+  "n": 10,
+  "checkpoint": 5,
+  "horizon": 1,
+  "p_harmful": 0.0,
+  "mean_utility": 0.0,
+  "median_utility": 0.0,
+  "interpretation": "Pilot only. Every branch had zero terminal reward within one future decision, so this horizon has no discriminative power for the current model/task subset and is excluded from the main audit."
+}
