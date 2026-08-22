@@ -57,9 +57,10 @@ gamefile = base_env.gamefiles[0]
 observation, info = base_env.reset(); observation = observation[0]
 history = []; actions = []; generations = []
 for step in range(args.checkpoint):
+    current_observation = observation
     observation, info, action, generation, _, done = step_env(
         base_env, observation, info, policy, history, args.max_new_tokens)
-    history.append((observation, action)); actions.append(action); generations.append(generation)
+    history.append((current_observation, action)); actions.append(action); generations.append(generation)
     if done:
         raise RuntimeError("episode terminated before checkpoint")
 candidate_text = "\n".join(f"Generation: {g}\nAction: {a}" for g, a in zip(generations, actions))

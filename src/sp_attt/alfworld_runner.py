@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import re
+from copy import deepcopy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -58,6 +59,16 @@ def seed_everything(seed: int) -> None:
     if torch.cuda.is_available(): torch.cuda.manual_seed_all(seed)
 
 
+def make_alfworld_game_env(config: dict, gamefile: str | None = None):
+    """Create a one-game eval environment, optionally forcing an exact gamefile."""
+    from alfworld.agents.environment import get_environment
+    wrapper = get_environment(config["env"]["type"])(config, train_eval="eval_in_distribution")
+    if gamefile is not None:
+        wrapper.game_files = [gamefile]
+        wrapper.num_games = 1
+    return wrapper, wrapper.init_env(batch_size=1)
+
+
 def _normalize(text: str) -> str:
     text = text.lower().strip()
     text = re.sub(r"^```[^\n]*\n|```$", "", text).strip()
@@ -110,6 +121,27 @@ class QwenTextPolicy:
         if self.learner is not None:
             self.learner.optimizer.state.clear()
             self.learner.token_history.clear()
+
+    def snapshot_adapter(self) -> dict:
+        if self.learner is None:
+            return {"parameters": {}, "optimizer": None, "token_history": []}
+        return {
+            "parameters": {name: parameter.detach().cpu().clone()
+                           for name, parameter in self.model.named_parameters()
+                           if parameter.requires_grad},
+            "optimizer": deepcopy(self.learner.optimizer.state_dict()),
+            "token_history": deepcopy(self.learner.token_history),
+        }
+
+    def restore_adapter(self, snapshot: dict) -> None:
+        if self.learner is None:
+            return
+        with torch.no_grad():
+            for name, parameter in self.model.named_parameters():
+                if parameter.requires_grad:
+                    parameter.copy_(snapshot["parameters"][name].to(parameter.device))
+        self.learner.optimizer.load_state_dict(deepcopy(snapshot["optimizer"]))
+        self.learner.token_history = deepcopy(snapshot["token_history"])
 
     def act(self, observation: str, history: list[tuple[str, str]], admissible: list[str],
             max_new_tokens: int = 96) -> tuple[str, str]:
