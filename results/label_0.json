@@ -1,0 +1,11 @@
+{
+  "episode_id": "label-0",
+  "checkpoint": 5,
+  "gamefile": "/root/.cache/alfworld/json_2.1.1/valid_seen/pick_two_obj_and_place-ToiletPaper-None-Toilet-408/trial_T20190909_080302_174780/game.tw-pddl",
+  "keep_return": 0.0,
+  "learn_return": 0.0,
+  "utility": 0.0,
+  "horizon": 1,
+  "keep_done": false,
+  "learn_done": false
+}
