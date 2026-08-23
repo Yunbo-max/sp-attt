@@ -1,0 +1,14 @@
+{
+  "n": 160,
+  "p_harmful": 0.09375,
+  "mean": -0.007611250000000004,
+  "median": 0.0,
+  "q05_q95": [
+    -1.02717,
+    1.00231
+  ],
+  "p_beneficial": 0.14375,
+  "n_nonzero": 38,
+  "keep_success_rate": 0.43125,
+  "learn_success_rate": 0.425
+}
