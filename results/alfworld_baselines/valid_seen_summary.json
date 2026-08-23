@@ -1,0 +1,32 @@
+[
+  {
+    "split": "valid_seen",
+    "method": "react",
+    "seed": 0,
+    "episodes": 140,
+    "success_rate": 0.5928571428571429,
+    "mean_steps": 28.478571428571428,
+    "mean_updates": 0.0,
+    "output": "results/alfworld_baselines/valid_seen_react_seed0.jsonl"
+  },
+  {
+    "split": "valid_seen",
+    "method": "ttt",
+    "seed": 0,
+    "episodes": 140,
+    "success_rate": 0.55,
+    "mean_steps": 29.614285714285714,
+    "mean_updates": 5.128571428571429,
+    "output": "results/alfworld_baselines/valid_seen_ttt_seed0.jsonl"
+  },
+  {
+    "split": "valid_seen",
+    "method": "attt",
+    "seed": 0,
+    "episodes": 140,
+    "success_rate": 0.5642857142857143,
+    "mean_steps": 29.285714285714285,
+    "mean_updates": 5.064285714285714,
+    "output": "results/alfworld_baselines/valid_seen_attt_seed0.jsonl"
+  }
+]
