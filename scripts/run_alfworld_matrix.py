@@ -6,9 +6,12 @@ performed without reconstructing trajectories.
 """
 
 import argparse
+import gc
 import json
 from dataclasses import asdict
 from pathlib import Path
+
+import torch
 
 from sp_attt.alfworld_runner import run_alfworld
 
@@ -59,6 +62,12 @@ for seed in args.seeds:
             "mean_updates": sum(row.updates for row in rows) / len(rows),
             "output": str(path),
         })
+        # Each method constructs a fresh Qwen model.  Explicitly collect the
+        # previous method before the next iteration so a long matrix does not
+        # retain its CUDA allocations and fail with an avoidable OOM.
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 with (output_dir / f"{args.split}_summary.json").open("w", encoding="utf-8") as stream:
     json.dump(summary, stream, indent=2)
