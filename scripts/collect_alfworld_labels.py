@@ -129,6 +129,12 @@ parser.add_argument("--max-checkpoints-per-game", type=int, default=3)
 parser.add_argument("--horizon", default="1")
 parser.add_argument("--max-new-tokens", type=int, default=8)
 parser.add_argument("--seed", type=int, default=0)
+parser.add_argument(
+    "--include-expert-wrapper", action="store_true",
+    help=("Keep ALFWorld's DAgger expert wrapper. Label collection does not use "
+          "expert_plan, so the default omits it to avoid an unnecessary expert "
+          "rollout (and its occasional handcoded-expert edge case)."),
+)
 parser.add_argument("--output", required=True)
 args = parser.parse_args()
 if args.horizon == "remaining" and args.max_steps <= args.min_checkpoint:
@@ -151,6 +157,15 @@ if errors_path.exists():
             if line.strip():
                 failed.add(json.loads(line)["label_id"])
 config = load_alfworld_config(args.config, data_dir=args.data_dir, split=args.split, games=args.games)
+# Candidate actions and counterfactual returns only require ``won`` and
+# ``admissible_commands``.  On the train split ALFWorld's default DAgger mode
+# also runs the handcoded expert on every environment step, even though its
+# expert_plan is never consumed here.  Disabling that unused wrapper preserves
+# the environment dynamics and requested model policy while materially reducing
+# CPU overhead.  ``--include-expert-wrapper`` is available for exact legacy
+# reproduction when expert metadata is needed.
+if not args.include_expert_wrapper:
+    config["general"]["training_method"] = "dqn"
 listing_wrapper, listing_env = make_alfworld_game_env(config)
 gamefiles = list(listing_wrapper.game_files)
 # Directory enumeration is deterministic but highly clustered by task/object.
