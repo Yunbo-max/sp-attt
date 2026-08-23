@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import gc
 import random
 import re
 from copy import deepcopy
@@ -365,4 +366,15 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                 break
         results.append(EpisodeResult(episode, method, success, step, updates, fallbacks, trajectory))
         env.close()
+    # ``run_alfworld`` is called repeatedly by the baseline matrix for methods
+    # with and without LoRA.  PEFT/transformers can retain cyclic references to
+    # the model and optimizer after the local policy goes out of scope; break
+    # those references explicitly so the next method can load a fresh model on
+    # a 16GB GPU.
+    policy.learner = None
+    policy.model = None
+    del policy
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     return results
