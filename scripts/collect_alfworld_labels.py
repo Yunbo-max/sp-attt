@@ -79,6 +79,9 @@ def paired_label(policy, config, gamefile, actions, history, candidate, snapshot
     returns = {}
     try:
         for mode in ("keep", "learn"):
+            print(json.dumps({"phase": "counterfactual_start", "label_id":
+                              f"{candidate.episode_id}:{candidate.step}", "mode": mode}),
+                  flush=True)
             policy.restore_adapter(snapshot)
             env = None
             try:
@@ -96,6 +99,9 @@ def paired_label(policy, config, gamefile, actions, history, candidate, snapshot
                                                horizon, max_new_tokens, candidate.step,
                                                candidate.max_steps)
                 returns[mode] = {"return": total, "success": success, "done": done}
+                print(json.dumps({"phase": "counterfactual_end", "label_id":
+                                  f"{candidate.episode_id}:{candidate.step}", "mode": mode,
+                                  "return": total}), flush=True)
             finally:
                 if env is not None:
                     env.close()
@@ -199,6 +205,8 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
             continue
         policy.reset_episode()
         policy.set_gamefile(gamefile)
+        print(json.dumps({"phase": "episode_start", "episode_id": str(game_index),
+                          "candidates": sorted(candidate_steps)}), flush=True)
         wrapper, env = make_alfworld_game_env(config, gamefile)
         observation, info = env.reset(); observation = observation[0]
         history = []; actions = []; generations = []
@@ -249,6 +257,8 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
                 if horizon <= 0:
                     raise ValueError(f"non-positive counterfactual horizon at checkpoint {step}")
                 try:
+                    print(json.dumps({"phase": "label_start", "label_id": label_id,
+                                      "horizon": horizon}), flush=True)
                     returns = paired_label(policy, config, gamefile, actions, history, candidate,
                                            snapshot, horizon, args.max_new_tokens)
                 except Exception as exc:
