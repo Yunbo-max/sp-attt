@@ -267,6 +267,7 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
                         f"Generation: {generation}\nAction: {past_action}"
                         for generation, past_action in zip(generations[:-1], actions[:-1])
                     ],
+                    "history_observations": [obs for obs, _action in history[:-1]],
                     "relative_position": step / args.max_steps,
                     "keep_return": returns["keep"]["return"],
                     "learn_return": returns["learn"]["return"],
