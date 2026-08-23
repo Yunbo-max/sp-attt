@@ -17,7 +17,7 @@ from sp_attt.alfworld_runner import run_alfworld
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--methods", nargs="+", default=["react", "ttt", "attt"],
-                    choices=["react", "ttt", "attt"])
+                    choices=["react", "ttt", "attt", "sp"])
 parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2, 3, 4])
 parser.add_argument("--episodes", type=int, default=140)
 parser.add_argument("--split", default="valid_seen")
@@ -28,6 +28,7 @@ parser.add_argument("--max-new-tokens", type=int, default=16)
 parser.add_argument("--output-dir", default="results/alfworld_baselines")
 parser.add_argument("--resume", action="store_true",
                     help="Reuse complete per-seed JSONL files instead of rerunning them")
+parser.add_argument("--gate", help="PlasticityGate checkpoint required for --methods sp")
 args = parser.parse_args()
 
 output_dir = Path(args.output_dir)
@@ -51,7 +52,8 @@ for seed in args.seeds:
                 continue
         rows = run_alfworld(method, model_name=args.model, config_path=args.config,
                             episodes=args.episodes, seed=seed, split=args.split,
-                            max_steps=args.max_steps, max_new_tokens=args.max_new_tokens)
+                            max_steps=args.max_steps, max_new_tokens=args.max_new_tokens,
+                            gate_path=args.gate)
         with path.open("w", encoding="utf-8") as stream:
             stream.writelines(json.dumps(asdict(row)) + "\n" for row in rows)
         summary.append({

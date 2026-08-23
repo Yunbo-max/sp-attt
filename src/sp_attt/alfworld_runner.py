@@ -16,7 +16,8 @@ import torch
 import yaml
 
 from .hf_learner import HuggingFaceLoRALearner, attach_episode_lora
-from .types import CandidateExperience
+from .novelty import action_repetition, sequence_novelty
+from .types import CandidateExperience, GateFeatures
 
 
 @dataclass
@@ -309,17 +310,61 @@ class QwenTextPolicy:
             return first_line, generated
         return choose_action(first_line, admissible)[0], generated
 
+    def gate_features(self, candidate_text: str, candidate_action: str,
+                      candidate_observation: str, history_texts: list[str],
+                      history_observations: list[str], relative_position: float) -> GateFeatures:
+        """Compute all gate inputs before any LoRA backward call."""
+        encoded = self.tokenizer.apply_chat_template(
+            [{"role": "user", "content": candidate_text}], add_generation_prompt=False,
+            return_tensors="pt", return_dict=True, enable_thinking=False,
+        )
+        encoded = {key: value.to(self.device) for key, value in encoded.items()
+                   if torch.is_tensor(value)}
+        with torch.inference_mode():
+            output = self.model(**encoded, output_hidden_states=True, use_cache=False)
+        hidden_states = output.hidden_states[-1][0]
+        mask = encoded.get("attention_mask", torch.ones(hidden_states.shape[:-1],
+                                                         device=self.device))[0].bool()
+        hidden = hidden_states[mask].float().mean(dim=0).cpu()
+        logits = output.logits[0, :-1].float()
+        labels = encoded["input_ids"][0, 1:]
+        normalized_nll = float(torch.nn.functional.cross_entropy(logits, labels).item()) if len(labels) else 0.0
+        actions = []
+        for text in history_texts:
+            match = re.search(r"Action:\s*(.*)$", text, flags=re.MULTILINE)
+            if match:
+                actions.append(match.group(1))
+        repeat_last, repeat_recent3 = action_repetition(candidate_action, actions)
+        return GateFeatures(
+            hidden, sequence_novelty(candidate_text, history_texts), normalized_nll,
+            repeat_last, repeat_recent3,
+            sequence_novelty(candidate_observation, history_observations), relative_position,
+        )
+
 
 def run_alfworld(method: str, *, model_name: str, config_path: str,
                  data_dir: str = "/root/.cache/alfworld", split: str = "valid_seen",
                  episodes: int = 1, seed: int = 0, max_steps: int = 50,
-                 candidate_every: int = 5, max_new_tokens: int = 24) -> list[EpisodeResult]:
+                 candidate_every: int = 5, max_new_tokens: int = 24,
+                 gate_path: str | None = None) -> list[EpisodeResult]:
     seed_everything(seed)
     config = load_alfworld_config(config_path, data_dir=data_dir, split=split, games=episodes)
     listing_wrapper, listing_env = make_alfworld_game_env(config)
     gamefiles = list(listing_wrapper.game_files)[:episodes]
     listing_env.close()
-    policy = QwenTextPolicy(model_name, use_lora=method in {"ttt", "attt"})
+    policy = QwenTextPolicy(model_name, use_lora=method in {"ttt", "attt", "sp"})
+    gate = None
+    gate_mean = gate_std = 0.0
+    if method == "sp":
+        if not gate_path:
+            raise ValueError("SP evaluation requires --gate checkpoint")
+        from .gate import PlasticityGate
+        checkpoint = torch.load(gate_path, map_location="cpu", weights_only=False)
+        gate = PlasticityGate(int(checkpoint["hidden_size"]))
+        gate.load_state_dict(checkpoint["state_dict"])
+        gate.eval()
+        gate_mean = float(checkpoint["target_mean"])
+        gate_std = float(checkpoint["target_std"])
     results = []
     for episode, gamefile in enumerate(gamefiles):
         policy.reset_episode()
@@ -357,6 +402,34 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                                                  observation, step, max_steps)
                 policy.learner.update(experience, method)
                 updates += 1
+            elif method == "sp" and step % candidate_every == 0 and not dones[0]:
+                # Compute gate inputs after the environment transition but
+                # before constructing the inner loss.  SKIP therefore performs
+                # no backward/update work at all.
+                text = f"Generation: {generation}\nAction: {action}"
+                history_texts = [
+                    f"Generation: {item['generation']}\nAction: {item['action']}"
+                    for item in trajectory[:-1]
+                ]
+                history_observations = [item["observation"] for item in trajectory[:-1]]
+                features = policy.gate_features(
+                    text, action, observation, history_texts, history_observations,
+                    step / max_steps,
+                )
+                with torch.inference_mode():
+                    predicted_normalized = float(gate(
+                        features.hidden.unsqueeze(0),
+                        features.scalars().unsqueeze(0),
+                    ).item())
+                predicted_value = gate_mean + gate_std * predicted_normalized
+                selected = predicted_value > 0.0
+                trajectory[-1]["gate_prediction"] = predicted_value
+                trajectory[-1]["gate_selected"] = selected
+                if selected:
+                    experience = CandidateExperience(str(episode), step // candidate_every,
+                                                     text, action, observation, step, max_steps)
+                    policy.learner.update(experience, "attt")
+                    updates += 1
             if isinstance(infos, dict):
                 info = {key: value for key, value in infos.items()}
             else:
@@ -374,6 +447,7 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
     policy.learner = None
     policy.model = None
     del policy
+    del gate
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
