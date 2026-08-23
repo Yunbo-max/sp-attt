@@ -73,25 +73,44 @@ def make_alfworld_game_env(config: dict, gamefile: str | None = None,
                            train_eval: str | None = None):
     """Create a one-game eval environment, optionally forcing an exact gamefile."""
     from alfworld.agents.environment import get_environment
+    # ALFWorld hard-codes asynchronous TextWorld workers in ``init_env``.
+    # Counterfactual collection always uses batch_size=1; allowing the caller
+    # to request a direct worker avoids IPC overhead without changing game
+    # dynamics.  Matrix evaluation keeps the historical asynchronous default.
+    register_games_original = None
+    if config.get("_sp_asynchronous", True) is False:
+        from textworld import gym as textworld_gym
+        register_games_original = textworld_gym.register_games
+
+        def register_games_direct(*args, **kwargs):
+            kwargs["asynchronous"] = False
+            return register_games_original(*args, **kwargs)
+
+        textworld_gym.register_games = register_games_direct
     if train_eval is None:
         split = config.get("_sp_split", "valid_seen")
         train_eval = "train" if split == "train" else (
             "eval_out_of_distribution" if split == "valid_unseen" else "eval_in_distribution"
         )
-    env_class = get_environment(config["env"]["type"])
-    if gamefile is None:
-        wrapper = env_class(config, train_eval=train_eval)
-    else:
-        # AlfredTWEnv normally walks every task directory during __init__. A
-        # counterfactual branch already names its exact gamefile, so bypass
-        # that scan without changing any environment behavior after init.
-        class SingleGameEnv(env_class):
-            def collect_game_files(self, verbose=False):
-                self.game_files = [gamefile]
-                self.num_games = 1
+    try:
+        env_class = get_environment(config["env"]["type"])
+        if gamefile is None:
+            wrapper = env_class(config, train_eval=train_eval)
+        else:
+            # AlfredTWEnv normally walks every task directory during __init__. A
+            # counterfactual branch already names its exact gamefile, so bypass
+            # that scan without changing any environment behavior after init.
+            class SingleGameEnv(env_class):
+                def collect_game_files(self, verbose=False):
+                    self.game_files = [gamefile]
+                    self.num_games = 1
 
-        wrapper = SingleGameEnv(config, train_eval=train_eval)
-    return wrapper, wrapper.init_env(batch_size=1)
+            wrapper = SingleGameEnv(config, train_eval=train_eval)
+        return wrapper, wrapper.init_env(batch_size=1)
+    finally:
+        if register_games_original is not None:
+            from textworld import gym as textworld_gym
+            textworld_gym.register_games = register_games_original
 
 
 def _normalize(text: str) -> str:

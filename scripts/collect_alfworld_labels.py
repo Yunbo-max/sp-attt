@@ -166,6 +166,9 @@ config = load_alfworld_config(args.config, data_dir=args.data_dir, split=args.sp
 # reproduction when expert metadata is needed.
 if not args.include_expert_wrapper:
     config["general"]["training_method"] = "dqn"
+# Each collector environment has batch_size=1.  Direct execution preserves
+# TextWorld transitions and removes the per-step subprocess/IPC overhead.
+config["_sp_asynchronous"] = False
 listing_wrapper, listing_env = make_alfworld_game_env(config)
 gamefiles = list(listing_wrapper.game_files)
 # Directory enumeration is deterministic but highly clustered by task/object.
