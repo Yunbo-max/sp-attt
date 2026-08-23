@@ -161,11 +161,9 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
         game_index = args.start_game + local_index
         if len(existing) >= args.target_labels:
             break
-        policy.reset_episode()
-        policy.set_gamefile(gamefile)
-        wrapper, env = make_alfworld_game_env(config, gamefile)
-        observation, info = env.reset(); observation = observation[0]
-        history = []; actions = []; generations = []
+        # Candidate sampling depends only on the deterministic protocol and
+        # episode index, not on environment state.  Compute it before creating
+        # an env so resumable runs can skip covered games cheaply.
         eligible = [step for step in range(args.candidate_every, args.max_steps + 1,
                                            args.candidate_every)
                     if step >= args.min_checkpoint and
@@ -198,8 +196,12 @@ with output_path.open("a", encoding="utf-8") as stream, errors_path.open("a", en
         # prefixes, where replaying a covered game costs minutes.
         covered = existing.keys() | failed
         if not candidate_steps or all(f"{game_index}:{step}" in covered for step in candidate_steps):
-            env.close()
             continue
+        policy.reset_episode()
+        policy.set_gamefile(gamefile)
+        wrapper, env = make_alfworld_game_env(config, gamefile)
+        observation, info = env.reset(); observation = observation[0]
+        history = []; actions = []; generations = []
         for step in range(1, args.max_steps + 1):
             current = observation
             action, generation = policy.act(observation, history, commands(info), args.max_new_tokens)
