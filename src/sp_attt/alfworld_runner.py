@@ -501,6 +501,14 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                 text = f"Generation: {generation}\nAction: {action}"
                 if method == "random_matched":
                     score, threshold = None, 0.0
+                elif method == "novelty_matched":
+                    # Novelty is a frozen text statistic; avoid an unnecessary
+                    # backbone forward pass in this matched baseline.
+                    history_texts = [
+                        f"Generation: {item['generation']}\nAction: {item['action']}"
+                        for item in trajectory[:-1]
+                    ]
+                    score, threshold = sequence_novelty(text, history_texts), novelty_threshold
                 else:
                     history_texts = [
                         f"Generation: {item['generation']}\nAction: {item['action']}"
@@ -511,10 +519,7 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                         text, action, observation, history_texts, history_observations,
                         step / max_steps,
                     )
-                    if method == "novelty_matched":
-                        score, threshold = features.novelty, novelty_threshold
-                    else:
-                        score, threshold = features.normalized_nll, uncertainty_threshold
+                    score, threshold = features.normalized_nll, uncertainty_threshold
                 selected = _matched_select(
                     method, candidate_index, reference_candidates, matched_budget,
                     updates, score, threshold, random_slots,
