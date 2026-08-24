@@ -1,12 +1,12 @@
 [
   {
     "split": "valid_seen",
-    "method": "random_matched",
+    "method": "novelty_matched",
     "seed": 0,
     "episodes": 140,
-    "success_rate": 0.5785714285714286,
-    "mean_steps": 28.9,
-    "mean_updates": 1.9714285714285715,
-    "output": "results/alfworld_phase2a_seed0/valid_seen_random_matched_seed0.jsonl"
+    "success_rate": 0.6,
+    "mean_steps": 28.4,
+    "mean_updates": 1.9642857142857142,
+    "output": "results/alfworld_phase2a_seed0/valid_seen_novelty_matched_seed0.jsonl"
   }
 ]
