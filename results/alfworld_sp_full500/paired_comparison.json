@@ -1,0 +1,32 @@
+{
+  "split": "valid_seen",
+  "episodes": 140,
+  "seed": 0,
+  "sp_successes": 86,
+  "comparisons": {
+    "react": {
+      "baseline_successes": 83,
+      "rescue_count": 7,
+      "lost_count": 4,
+      "delta_successes": 3,
+      "delta_mean_steps": -0.2357142857142857,
+      "delta_mean_updates": 2.0785714285714287
+    },
+    "ttt": {
+      "baseline_successes": 77,
+      "rescue_count": 12,
+      "lost_count": 3,
+      "delta_successes": 9,
+      "delta_mean_steps": -1.3714285714285714,
+      "delta_mean_updates": -3.05
+    },
+    "attt": {
+      "baseline_successes": 79,
+      "rescue_count": 11,
+      "lost_count": 4,
+      "delta_successes": 7,
+      "delta_mean_steps": -1.042857142857143,
+      "delta_mean_updates": -2.9857142857142853
+    }
+  }
+}
