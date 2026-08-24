@@ -1,0 +1,16 @@
+{
+  "split": "valid_seen",
+  "episodes": 140,
+  "seed": 0,
+  "methods": {
+    "react": {"success_rate": 0.5928571428571429, "mean_steps": 28.478571428571428, "mean_updates": 0.0},
+    "ttt": {"success_rate": 0.55, "mean_steps": 29.614285714285714, "mean_updates": 5.128571428571429},
+    "attt_k5": {"success_rate": 0.5642857142857143, "mean_steps": 29.285714285714285, "mean_updates": 5.064285714285714},
+    "random_matched": {"success_rate": 0.5785714285714286, "mean_steps": 28.9, "mean_updates": 1.9714285714285715},
+    "novelty_matched": {"success_rate": 0.6, "mean_steps": 28.4, "mean_updates": 1.9642857142857142},
+    "uncertainty_matched": {"success_rate": 0.6, "mean_steps": 28.84285714285714, "mean_updates": 1.9428571428571428},
+    "attt_k10": {"success_rate": 0.6071428571428571, "mean_steps": 28.40714285714286, "mean_updates": 2.085714285714286},
+    "attt_k12": {"success_rate": 0.6214285714285714, "mean_steps": 28.164285714285715, "mean_updates": 1.8857142857142857},
+    "sp_attt_500": {"success_rate": 0.6142857142857143, "mean_steps": 28.242857142857144, "mean_updates": 2.0785714285714287}
+  }
+}

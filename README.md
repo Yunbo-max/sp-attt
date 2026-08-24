@@ -27,6 +27,14 @@ gate AUROC for `U > 0` is 0.581. The final 500-row audit finds a 9.60% harmful-u
 be skipped. Artifacts are in `results/alfworld_sp_full500/`, `results/audit_reactprompt_features_early_remaining_500.json`,
 and the two `*_500.pt` gate checkpoints.
 
+## Phase 2A controls (same 140-task seed)
+
+Matched controls are recorded in [results/alfworld_phase2a_seed0/summary.md](results/alfworld_phase2a_seed0/summary.md).
+Random-Matched reaches 57.86%, Novelty-Matched and Uncertainty-Matched reach 60.00%, and fixed
+cadence K=10/K=12 reach 60.71%/62.14%. Since K=12 currently matches or exceeds SP on this one
+seed, the present evidence does not isolate semantic selection from sparse cadence; multi-seed
+matched-budget experiments are required before making that claim.
+
 ## Method
 
 At every `K=5` LLM decision turns, the current experience becomes a candidate `x_k`. We estimate
