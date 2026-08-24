@@ -1,12 +1,12 @@
 [
   {
     "split": "valid_seen",
-    "method": "uncertainty_matched",
+    "method": "attt_k10",
     "seed": 0,
     "episodes": 140,
-    "success_rate": 0.6,
-    "mean_steps": 28.84285714285714,
-    "mean_updates": 1.9428571428571428,
-    "output": "results/alfworld_phase2a_seed0/valid_seen_uncertainty_matched_seed0.jsonl"
+    "success_rate": 0.6071428571428571,
+    "mean_steps": 28.40714285714286,
+    "mean_updates": 2.085714285714286,
+    "output": "results/alfworld_phase2a_seed0/valid_seen_attt_k10_seed0.jsonl"
   }
 ]
