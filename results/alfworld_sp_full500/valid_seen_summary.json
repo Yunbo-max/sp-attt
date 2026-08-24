@@ -1,0 +1,12 @@
+[
+  {
+    "split": "valid_seen",
+    "method": "sp",
+    "seed": 0,
+    "episodes": 140,
+    "success_rate": 0.6142857142857143,
+    "mean_steps": 28.242857142857144,
+    "mean_updates": 2.0785714285714287,
+    "output": "results/alfworld_sp_full500/valid_seen_sp_seed0.jsonl"
+  }
+]

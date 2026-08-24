@@ -17,12 +17,15 @@ use the same task order, decoding budget, and episode-local LoRA protocol.
 | ReAct | 83/140 (59.29%) | 28.48 | 0.00 |
 | Vanilla TTT | 77/140 (55.00%) | 29.61 | 5.13 |
 | aTTT | 79/140 (56.43%) | 29.29 | 5.06 |
-| SP-aTTT (101-label gate) | **84/140 (60.00%)** | 28.61 | **0.57** |
+| SP-aTTT (101-label gate) | 84/140 (60.00%) | 28.61 | 0.57 |
+| SP-aTTT (500-label gate) | **86/140 (61.43%)** | **28.24** | **2.08** |
 
-The SP run is promising (+5 successes versus aTTT with about 88.7% fewer updates), but it is
-currently one seed and uses a small 101-row complete-feature gate. The resumable collector is
-continuing toward the planned 500+ paired labels. The current 193-row audit finds a 10.36% harmful
-update rate (`U < 0`), supporting the premise that some experiences should be skipped.
+The 500-label SP run is promising (+7 successes versus aTTT), but it is still one seed and should
+not be presented as a final multi-seed claim. The complete-feature subset has 408 rows; the held-out
+gate AUROC for `U > 0` is 0.581. The final 500-row audit finds a 9.60% harmful-update rate
+(`U < 0`) and a 14.00% beneficial-update rate, supporting the premise that some experiences should
+be skipped. Artifacts are in `results/alfworld_sp_full500/`, `results/audit_reactprompt_features_early_remaining_500.json`,
+and the two `*_500.pt` gate checkpoints.
 
 ## Method
 
