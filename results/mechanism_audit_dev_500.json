@@ -1,0 +1,15 @@
+{
+  "split": "dev",
+  "n": 81,
+  "selected": 41,
+  "selected_rate": 0.5061728395061729,
+  "raw_harmful_rate": 0.12345679012345678,
+  "raw_beneficial_rate": 0.13580246913580246,
+  "harmful_rate_selected": 0.12195121951219512,
+  "harmful_rate_skipped": 0.125,
+  "harmful_recall_skipped": 0.5,
+  "mean_utility_selected": -0.02519511617720127,
+  "mean_utility_skipped": 0.001705004833638668,
+  "absolute_harmful_share": 0.5417343974113464,
+  "auprc_harmful": 0.21282557361488247
+}
