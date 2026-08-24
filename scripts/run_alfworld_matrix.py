@@ -17,7 +17,8 @@ from sp_attt.alfworld_runner import run_alfworld
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--methods", nargs="+", default=["react", "ttt", "attt"],
-                    choices=["react", "ttt", "attt", "sp"])
+                    choices=["react", "ttt", "attt", "sp", "random_matched",
+                             "novelty_matched", "uncertainty_matched", "attt_k10", "attt_k12"])
 parser.add_argument("--seeds", nargs="+", type=int, default=[0, 1, 2, 3, 4])
 parser.add_argument("--episodes", type=int, default=140)
 parser.add_argument("--split", default="valid_seen")
@@ -29,7 +30,27 @@ parser.add_argument("--output-dir", default="results/alfworld_baselines")
 parser.add_argument("--resume", action="store_true",
                     help="Reuse complete per-seed JSONL files instead of rerunning them")
 parser.add_argument("--gate", help="PlasticityGate checkpoint required for --methods sp")
+parser.add_argument("--matched-rate", type=float, default=0.411,
+                    help="Fraction of reference candidate checkpoints selected by matched methods")
+parser.add_argument("--budget-reference",
+                    default="results/alfworld_baselines/valid_seen_attt_seed0.jsonl",
+                    help="aTTT JSONL whose per-episode update counts define matched budgets")
+parser.add_argument("--novelty-threshold", type=float, default=0.7197179794311523)
+parser.add_argument("--uncertainty-threshold", type=float, default=3.6504969596862793)
 args = parser.parse_args()
+
+
+def reference_candidate_counts(path: str, episodes: int) -> list[int] | None:
+    if not any(method.endswith("_matched") for method in args.methods):
+        return None
+    with open(path, encoding="utf-8") as stream:
+        rows = [json.loads(line) for line in stream if line.strip()]
+    if len(rows) < episodes:
+        raise ValueError(f"budget reference has {len(rows)} episodes, need {episodes}: {path}")
+    return [int(row["updates"]) for row in rows[:episodes]]
+
+
+matched_counts = reference_candidate_counts(args.budget_reference, args.episodes)
 
 output_dir = Path(args.output_dir)
 output_dir.mkdir(parents=True, exist_ok=True)
@@ -50,10 +71,18 @@ for seed in args.seeds:
                     "output": str(path), "resumed": True,
                 })
                 continue
-        rows = run_alfworld(method, model_name=args.model, config_path=args.config,
+        effective_cadence = 10 if method == "attt_k10" else 12 if method == "attt_k12" else 5
+        runner_method = "attt" if method in {"attt_k10", "attt_k12"} else method
+        rows = run_alfworld(runner_method, model_name=args.model, config_path=args.config,
                             episodes=args.episodes, seed=seed, split=args.split,
-                            max_steps=args.max_steps, max_new_tokens=args.max_new_tokens,
-                            gate_path=args.gate)
+                            max_steps=args.max_steps, candidate_every=effective_cadence,
+                            max_new_tokens=args.max_new_tokens, gate_path=args.gate,
+                            matched_candidate_counts=matched_counts,
+                            matched_rate=args.matched_rate,
+                            novelty_threshold=args.novelty_threshold,
+                            uncertainty_threshold=args.uncertainty_threshold)
+        for row in rows:
+            row.method = method
         with path.open("w", encoding="utf-8") as stream:
             stream.writelines(json.dumps(asdict(row)) + "\n" for row in rows)
         summary.append({

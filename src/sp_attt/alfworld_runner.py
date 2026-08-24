@@ -212,6 +212,42 @@ def _clean_generation_line(generation: str) -> str:
     return re.sub(r"^>\s*", "", line).strip()
 
 
+MATCHED_METHODS = {"random_matched", "novelty_matched", "uncertainty_matched"}
+
+
+def _matched_budget(reference_candidates: int, rate: float) -> int:
+    """Return the fixed per-episode update budget used by matched baselines."""
+    return max(0, min(reference_candidates, int(round(rate * reference_candidates))))
+
+
+def _random_slots(reference_candidates: int, budget: int, seed: int, episode: int) -> set[int]:
+    """Choose reproducible candidate indices without looking at future outcomes."""
+    if budget <= 0:
+        return set()
+    rng = random.Random((seed + 1) * 1_000_003 + episode * 9_176)
+    return set(rng.sample(range(1, reference_candidates + 1), budget))
+
+
+def _matched_select(method: str, candidate_index: int, reference_candidates: int,
+                    budget: int, selected: int, score: float | None,
+                    threshold: float, random_slots: set[int]) -> bool:
+    """Select an online candidate while preserving the planned sparse budget.
+
+    Random uses exact pre-sampled slots.  Heuristic methods use a frozen score
+    threshold; the final remaining slots are forced so early episode endings do
+    not silently turn a matched method into a lower-budget method.
+    """
+    remaining_budget = budget - selected
+    if remaining_budget <= 0:
+        return False
+    remaining_reference = max(reference_candidates - candidate_index, 0)
+    if remaining_reference <= remaining_budget:
+        return True
+    if method == "random_matched":
+        return candidate_index in random_slots
+    return score is not None and score >= threshold
+
+
 class QwenTextPolicy:
     # Full ALFWorld transcripts can exceed the A4000's KV-cache budget long
     # before the 50-step environment limit.  Keep the initial observation and
@@ -365,13 +401,17 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                  data_dir: str = "/root/.cache/alfworld", split: str = "valid_seen",
                  episodes: int = 1, seed: int = 0, max_steps: int = 50,
                  candidate_every: int = 5, max_new_tokens: int = 24,
-                 gate_path: str | None = None) -> list[EpisodeResult]:
+                 gate_path: str | None = None,
+                 matched_candidate_counts: list[int] | None = None,
+                 matched_rate: float = 0.411,
+                 novelty_threshold: float = 0.7197179794311523,
+                 uncertainty_threshold: float = 3.6504969596862793) -> list[EpisodeResult]:
     seed_everything(seed)
     config = load_alfworld_config(config_path, data_dir=data_dir, split=split, games=episodes)
     listing_wrapper, listing_env = make_alfworld_game_env(config)
     gamefiles = list(listing_wrapper.game_files)[:episodes]
     listing_env.close()
-    policy = QwenTextPolicy(model_name, use_lora=method in {"ttt", "attt", "sp"})
+    policy = QwenTextPolicy(model_name, use_lora=(method in ({"ttt", "attt", "sp"} | MATCHED_METHODS)))
     gate = None
     gate_mean = gate_std = 0.0
     if method == "sp":
@@ -396,6 +436,13 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
         trajectory: list[dict[str, Any]] = []
         updates = fallbacks = 0
         success = False
+        reference_candidates = (
+            int(matched_candidate_counts[episode])
+            if matched_candidate_counts is not None else 0
+        )
+        matched_budget = _matched_budget(reference_candidates, matched_rate)
+        random_slots = _random_slots(reference_candidates, matched_budget, seed, episode)
+        candidate_index = 0
         for step in range(1, max_steps + 1):
             admissible = list(info["admissible_commands"][0])
             action, generation = policy.act(observation, history, admissible,
@@ -446,6 +493,36 @@ def run_alfworld(method: str, *, model_name: str, config_path: str,
                 trajectory[-1]["gate_selected"] = selected
                 if selected:
                     experience = CandidateExperience(str(episode), step // candidate_every,
+                                                     text, action, observation, step, max_steps)
+                    policy.learner.update(experience, "attt")
+                    updates += 1
+            elif method in MATCHED_METHODS and step % candidate_every == 0 and not dones[0]:
+                candidate_index += 1
+                text = f"Generation: {generation}\nAction: {action}"
+                if method == "random_matched":
+                    score, threshold = None, 0.0
+                else:
+                    history_texts = [
+                        f"Generation: {item['generation']}\nAction: {item['action']}"
+                        for item in trajectory[:-1]
+                    ]
+                    history_observations = [item["observation"] for item in trajectory[:-1]]
+                    features = policy.gate_features(
+                        text, action, observation, history_texts, history_observations,
+                        step / max_steps,
+                    )
+                    if method == "novelty_matched":
+                        score, threshold = features.novelty, novelty_threshold
+                    else:
+                        score, threshold = features.normalized_nll, uncertainty_threshold
+                selected = _matched_select(
+                    method, candidate_index, reference_candidates, matched_budget,
+                    updates, score, threshold, random_slots,
+                )
+                trajectory[-1]["matched_score"] = score
+                trajectory[-1]["matched_selected"] = selected
+                if selected:
+                    experience = CandidateExperience(str(episode), candidate_index,
                                                      text, action, observation, step, max_steps)
                     policy.learner.update(experience, "attt")
                     updates += 1
