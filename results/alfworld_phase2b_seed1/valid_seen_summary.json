@@ -8,5 +8,15 @@
     "mean_steps": 28.021428571428572,
     "mean_updates": 1.8714285714285714,
     "output": "results/alfworld_phase2b_seed1/valid_seen_attt_k12_seed1.jsonl"
+  },
+  {
+    "split": "valid_seen",
+    "method": "sp",
+    "seed": 1,
+    "episodes": 140,
+    "success_rate": 0.5928571428571429,
+    "mean_steps": 28.492857142857144,
+    "mean_updates": 2.107142857142857,
+    "output": "results/alfworld_phase2b_seed1/valid_seen_sp_seed1.jsonl"
   }
 ]
