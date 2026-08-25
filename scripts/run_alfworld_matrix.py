@@ -33,16 +33,14 @@ parser.add_argument("--gate", help="PlasticityGate checkpoint required for --met
 parser.add_argument("--matched-rate", type=float, default=0.411,
                     help="Fraction of reference candidate checkpoints selected by matched methods")
 parser.add_argument("--budget-reference",
-                    default="results/alfworld_baselines/valid_seen_attt_seed0.jsonl",
-                    help="aTTT JSONL whose per-episode update counts define matched budgets")
+                    default="results/alfworld_baselines/valid_seen_attt_seed{seed}.jsonl",
+                    help="aTTT JSONL whose per-episode update counts define matched budgets; {seed} is substituted")
 parser.add_argument("--novelty-threshold", type=float, default=0.7197179794311523)
 parser.add_argument("--uncertainty-threshold", type=float, default=3.6504969596862793)
 args = parser.parse_args()
 
 
 def reference_candidate_counts(path: str, episodes: int) -> list[int] | None:
-    if not any(method.endswith("_matched") for method in args.methods):
-        return None
     with open(path, encoding="utf-8") as stream:
         rows = [json.loads(line) for line in stream if line.strip()]
     if len(rows) < episodes:
@@ -50,12 +48,14 @@ def reference_candidate_counts(path: str, episodes: int) -> list[int] | None:
     return [int(row["updates"]) for row in rows[:episodes]]
 
 
-matched_counts = reference_candidate_counts(args.budget_reference, args.episodes)
-
 output_dir = Path(args.output_dir)
 output_dir.mkdir(parents=True, exist_ok=True)
 summary = []
 for seed in args.seeds:
+    matched_counts = None
+    if any(method.endswith("_matched") for method in args.methods):
+        reference_path = args.budget_reference.format(seed=seed)
+        matched_counts = reference_candidate_counts(reference_path, args.episodes)
     for method in args.methods:
         path = output_dir / f"{args.split}_{method}_seed{seed}.jsonl"
         if args.resume and path.exists():
