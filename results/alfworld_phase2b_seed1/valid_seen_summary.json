@@ -1,0 +1,12 @@
+[
+  {
+    "split": "valid_seen",
+    "method": "attt_k12",
+    "seed": 1,
+    "episodes": 140,
+    "success_rate": 0.6214285714285714,
+    "mean_steps": 28.021428571428572,
+    "mean_updates": 1.8714285714285714,
+    "output": "results/alfworld_phase2b_seed1/valid_seen_attt_k12_seed1.jsonl"
+  }
+]
